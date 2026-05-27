@@ -25,7 +25,7 @@
 | Lucio Angel  | Desarrollador Backend        | [@locckusdem](https://github.com/locckusdem)   | lucio.angel@alu.frlp.utn.edu.ar            |
 | Araceli Melina Davila  | Diseñador / Frontend         | [@davilaaraceli18](https://github.com/davilaaraceli18)   | davilaaraceli@hotmail.com            |
 | Rivero Emilio  | Diseñador / Frontend         | [@EmiRM73](https://github.com/EmiRM73)   | emiliorivero161@gmail.com            |
-| Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
+| Privitera Luciano  | Diseñador / Frontend         | [@lucianoprivitera](https://github.com/lucianoprivitera)   | luchoprivi008@gmail.com            |
 | Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
 
 
