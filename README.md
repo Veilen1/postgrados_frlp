@@ -24,7 +24,7 @@
 | Valentin Garcia Devrient | Líder / Desarrollador Principal | [@veilen1](https://github.com/Veilen1) | devrientv@gmail.com|
 | Lucio Angel  | Desarrollador Backend        | [@locckusdem](https://github.com/locckusdem)   | lucio.angel@alu.frlp.utn.edu.ar            |
 | Araceli Melina Davila  | Diseñador / Frontend         | [@davilaaraceli18](https://github.com/davilaaraceli18)   | davilaaraceli@hotmail.com            |
-| Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
+| Rivero Emilio  | Diseñador / Frontend         | [@EmiRM73](https://github.com/EmiRM73)   | emiliorivero161@gmail.com            |
 | Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
 | Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
 
