@@ -26,8 +26,7 @@
 | Araceli Melina Davila  | Diseñador / Frontend         | [@davilaaraceli18](https://github.com/davilaaraceli18)   | davilaaraceli@hotmail.com            |
 | Rivero Emilio  | Diseñador / Frontend         | [@EmiRM73](https://github.com/EmiRM73)   | emiliorivero161@gmail.com            |
 | Privitera Luciano  | Diseñador / Frontend         | [@lucianoprivitera](https://github.com/lucianoprivitera)   | luchoprivi008@gmail.com            |
-| Nombre Compañero 2  | Diseñador / Frontend         | [@usuario3](https://github.com/usuario3)   | email3@ejemplo.com            |
-
+| Redruello Lautaro  | Desarrollador Backend  | [@usuario3](https://github.com/lauty04ARG)   | lautaredruello@gmail.com|
 
 
 ### Reglas básicas del equipo
