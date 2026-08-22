@@ -8,12 +8,12 @@ Cada integrante es responsable de desarrollar, testear y pushear su componente e
 
 | Integrante | Componente / Tarea Asignada | Detalle técnico a implementar |
 | :--- | :--- | :--- |
-| **Emilio Rivero** | **Estructura Base y Login** | Componente `<Login/>` con validación hardcodeada. Layout principal en `App.jsx`, Navbar y navegación entre vistas (estado `vista`). |
-| **Valen Garcia** | **Vista: Preinscripción** | Componente `<Preinscripcion/>`. Lógica del formulario multi-paso (Datos Personales -> Resumen) y manejo del estado `formData`. |
-| **Lucio Angel** | **Vista: Panel Docente** | Componente `<PanelDocente/>`. Tabla de asistencia, inputs dinámicos de fechas (estado `fechas`) y cálculo visual de alumnos "Libres". |
-| **Luciano Privitera** | **Vista: Perfil Estudiante** | Componente `<PanelConduccionEstudiante/>`. Buscador por legajo, base de datos hardcodeada, renderizado de alertas y barra de progreso. |
-| **Lautaro Reduello** | **Vistas: Inscripciones y Tesis** | Componentes `<PanelConduccionInscripciones/>` y `<VistaTesis/>`. Tablas de datos, filtros visuales y badges de colores (Completo/Pendiente). |
-| **Davila Araceli** | **Vista: Estadísticas y CSS** | Componente `<VistaEstadisticas/>`. Gráfico de barras hecho 100% en CSS, cards de métricas, y mantenimiento del archivo `App.css` global. |
+| **Emilio Rivero** | **Estructura Base y Login** | Componente `<Login/>` con validación hardcodeada. Layout principal en `App.jsx`, Navbar y navegación centralizada (estado `vista`). |
+| **Valen Garcia** | **Vista: Preinscripción** | Componente `<Preinscripcion/>`. Lógica del formulario multi-paso, manejo del estado `formData` y validaciones estrictas (campos obligatorios). |
+| **Lucio Angel** | **Vista: Panel Docente** | Componente `<PanelDocente/>`. Tabla de asistencia con inputs de fechas dinámicas y selectores (`<select>`) editables para calificaciones finales y estado "Libre". |
+| **Luciano Privitera** | **Vista: Perfil Estudiante** | Componente `<PanelConduccionEstudiante/>`. Buscador dinámico por legajo/nombre, renderizado condicional de alertas y barra de progreso. |
+| **Lautaro Reduello** | **Vista: Gestión de Posgrados** | Componente `<VistaPosgrados/>`. Lógica interactiva completa para agregar programas, y editar/eliminar cohortes en tiempo real. |
+| **Davila Araceli** | **Vista: Inscripciones y Estadísticas** | Componentes `<PanelConduccionInscripciones/>` y `<VistaEstadisticas/>`. Tablas con filtros cruzados, métricas y gráfico de barras dinámico en CSS puro. |
 
 ---
 
