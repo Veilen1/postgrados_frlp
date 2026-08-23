@@ -16,3 +16,6 @@ th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
 thead { background: #e0e0e0; }
 tbody tr:nth-child(even) { background: #f9f9f9; }
 .checkbox-cell { text-align: center; }
+
+.date-input-header { background: transparent; border: 1px dashed #999; border-radius: 4px; padding: 2px; font-weight: bold; text-align: center; width: 110px; cursor: pointer; }
+.date-input-header:focus { border: 1px solid #00539C; background: white; }

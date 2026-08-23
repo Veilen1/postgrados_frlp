@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './App.css';
 
 function PanelDocente() {
+  const [fechas, setFechas] = useState(['2026-05-10', '2026-05-17', '2026-05-24']);
+
   const alumnos = [
     { apellido: 'Altamirano', nombre: 'Florencia', correo: 'aFlorencia@ejemplo.com', titulo: 'Ingeniería', a1: true, a2: false, a3: true, nota: '8' },
     { apellido: 'Altamirano', nombre: 'Agustin', correo: 'aAgustin@ejemplo.com', titulo: 'Ingeniería', a1: true, a2: true, a3: true, nota: '9' },
@@ -9,6 +11,12 @@ function PanelDocente() {
     { apellido: 'Suarez', nombre: 'Valentin', correo: 'sValentin@ejemplo.com', titulo: 'Ingeniería', a1: false, a2: false, a3: true, nota: 'Libre' },
     { apellido: 'Pueblas', nombre: 'Tomas', correo: 'pTomas@ejemplo.com', titulo: 'Ingeniería', a1: true, a2: true, a3: true, nota: '10' }
   ];
+
+  const updateFecha = (index, value) => {
+    const newFechas = [...fechas];
+    newFechas[index] = value;
+    setFechas(newFechas);
+  };
 
   return (
     <div>
@@ -27,9 +35,18 @@ function PanelDocente() {
               <th>Nombre</th>
               <th>Correo Electrónico</th>
               <th>Título de Grado</th>
-              <th className="checkbox-cell">Asistencia Clase 1</th>
-              <th className="checkbox-cell">Asistencia Clase 2</th>
-              <th className="checkbox-cell">Asistencia Clase 3</th>
+              <th className="checkbox-cell">
+                Asistencia<br/>
+                <input type="date" className="date-input-header" value={fechas[0]} onChange={(e) => updateFecha(0, e.target.value)} />
+              </th>
+              <th className="checkbox-cell">
+                Asistencia<br/>
+                <input type="date" className="date-input-header" value={fechas[1]} onChange={(e) => updateFecha(1, e.target.value)} />
+              </th>
+              <th className="checkbox-cell">
+                Asistencia<br/>
+                <input type="date" className="date-input-header" value={fechas[2]} onChange={(e) => updateFecha(2, e.target.value)} />
+              </th>
               <th className="checkbox-cell">Calificación Final</th>
             </tr>
           </thead>
@@ -43,7 +60,7 @@ function PanelDocente() {
                 <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a1} /></td>
                 <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a2} /></td>
                 <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a3} /></td>
-                <td className="checkbox-cell">{a.nota}</td>
+                <td>{a.nota}</td>
               </tr>
             ))}
           </tbody>
