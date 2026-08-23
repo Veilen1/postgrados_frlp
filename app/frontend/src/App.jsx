@@ -27,23 +27,23 @@ function PanelDocente() {
               <th>Nombre</th>
               <th>Correo Electrónico</th>
               <th>Título de Grado</th>
-              <th>Asistencia Clase 1</th>
-              <th>Asistencia Clase 2</th>
-              <th>Asistencia Clase 3</th>
-              <th>Calificación Final</th>
+              <th className="checkbox-cell">Asistencia Clase 1</th>
+              <th className="checkbox-cell">Asistencia Clase 2</th>
+              <th className="checkbox-cell">Asistencia Clase 3</th>
+              <th className="checkbox-cell">Calificación Final</th>
             </tr>
           </thead>
           <tbody>
             {alumnos.map((a, i) => (
               <tr key={i}>
-                <td>{a.apellido}</td>
+                <td style={{height: '40px'}}>{a.apellido}</td>
                 <td>{a.nombre}</td>
                 <td>{a.correo}</td>
                 <td>{a.titulo}</td>
-                <td><input type="checkbox" defaultChecked={a.a1} /></td>
-                <td><input type="checkbox" defaultChecked={a.a2} /></td>
-                <td><input type="checkbox" defaultChecked={a.a3} /></td>
-                <td>{a.nota}</td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a1} /></td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a2} /></td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a3} /></td>
+                <td className="checkbox-cell">{a.nota}</td>
               </tr>
             ))}
           </tbody>
