@@ -11,6 +11,12 @@ body { background-color: #f4f4f4; color: #333; }
 .demo-nav button:hover { background: #444; }
 .demo-nav button.active { background: #00539C; }
 
+/* --- COMPONENTE LOGIN --- */
+.login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #e0e0e0; }
+.login-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 400px; text-align: center; }
+.login-card h1 { color: #00539C; margin-bottom: 5px; font-size: 2.5rem; letter-spacing: 2px;}
+.login-card h2 { color: #333; margin-bottom: 25px; font-size: 1.2rem; font-weight: normal;}
+
 /* --- ELEMENTOS UI GLOBALES --- */
 .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #e9ecef; outline: none; width: 100%; }
 .form-control:focus { border-color: #00539C; background-color: white; }
