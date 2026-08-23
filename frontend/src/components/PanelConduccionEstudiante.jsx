@@ -5,7 +5,6 @@ export default function PanelConduccionEstudiante({ legajoInicial }) {
   const [busqueda, setBusqueda] = useState(legajoInicial || '');
   const [errorBusqueda, setErrorBusqueda] = useState('');
 
-  // Base de datos hardcodeada de estudiantes
   const bdEstudiantes = [
     {
       legajo: "12345", nombre: "Almiron Guadalupe", cohorte: "2026", carrera: "Maestría en Ingeniería",
@@ -33,9 +32,44 @@ export default function PanelConduccionEstudiante({ legajoInicial }) {
 
   const [estudianteActual, setEstudianteActual] = useState(bdEstudiantes[0]);
 
+  useEffect(() => {
+    if (legajoInicial) {
+      setBusqueda(legajoInicial);
+      const enc = bdEstudiantes.find(e => e.legajo === legajoInicial);
+      if (enc) {
+        setEstudianteActual(enc);
+        setErrorBusqueda('');
+      }
+    }
+  }, [legajoInicial]);
+
+  const handleSearch = () => {
+    const encontrado = bdEstudiantes.find(e => e.legajo === busqueda);
+    if (encontrado) {
+      setEstudianteActual(encontrado);
+      setTab('seminarios');
+      setErrorBusqueda('');
+    } else {
+      setErrorBusqueda(`No se encontró el legajo: ${busqueda}`);
+    }
+  };
+
   return (
     <div>
-      {/* Estructura base inicial */}
+      <div style={{marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', background: '#e9ecef', padding: '15px', borderRadius: '8px'}}>
+         <label style={{fontWeight: 'bold'}}>Buscar Estudiante:</label>
+         <input 
+           type="text" 
+           placeholder="Ingrese N° de Legajo..." 
+           value={busqueda} 
+           onChange={e => {setBusqueda(e.target.value); setErrorBusqueda('');}} 
+           className={`form-control ${errorBusqueda ? 'error' : ''}`} 
+           style={{maxWidth: '300px', background: 'white'}} 
+           onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+         />
+         <button className="btn-primary" style={{width: 'auto'}} onClick={handleSearch}>🔍 Buscar</button>
+         {errorBusqueda && <span className="error-text" style={{marginLeft: '10px'}}>{errorBusqueda}</span>}
+      </div>
     </div>
   );
 }
