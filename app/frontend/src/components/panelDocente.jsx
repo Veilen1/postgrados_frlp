@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './panelDocente.css';
 
 export default function PanelDocente() {
   const [fechas, setFechas] = useState(['2026-05-10', '2026-05-17', '2026-05-24']);
