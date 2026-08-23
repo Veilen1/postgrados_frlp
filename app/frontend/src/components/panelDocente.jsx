@@ -1,4 +1,3 @@
-// src/components/PanelDocente.jsx
 import React, { useState } from 'react';
 
 export default function PanelDocente() {
@@ -57,9 +56,9 @@ export default function PanelDocente() {
                 <td>{a.nombre}</td>
                 <td>{a.correo}</td>
                 <td>{a.titulo}</td>
-                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a1} /></td>
-                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a2} /></td>
-                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a3} /></td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a1} style={{transform:'scale(1.5)'}}/></td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a2} style={{transform:'scale(1.5)'}}/></td>
+                <td className="checkbox-cell"><input type="checkbox" defaultChecked={a.a3} style={{transform:'scale(1.5)'}}/></td>
                 <td className="checkbox-cell">
                   <select defaultValue={a.nota} className="form-control" style={{width: '90px', margin: '0 auto', textAlign: 'center', background: 'white'}}>
                     <option value="">-</option>
