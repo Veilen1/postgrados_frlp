@@ -20,6 +20,15 @@ export default function VistaPosgrados() {
 
   const [nuevoProg, setNuevoProg] = useState({ nombre: '', desc: '' });
   const [errorProg, setErrorProg] = useState('');
+  
+  const [editProgId, setEditProgId] = useState(null);
+  const [editProgData, setEditProgData] = useState({ nombre: '', desc: '' });
+
+  const [editCohorteId, setEditCohorteId] = useState(null);
+  const [editCohorteData, setEditCohorteData] = useState({ id: '', nombre: '', abierta: true });
+
+  const [nuevasCohortes, setNuevasCohortes] = useState({});
+  const [erroresCohorte, setErroresCohorte] = useState({});
 
   const handleAgregarPrograma = () => {
     if(!nuevoProg.nombre) {
@@ -29,6 +38,60 @@ export default function VistaPosgrados() {
     setProgramas([...programas, { id: Date.now(), nombre: nuevoProg.nombre, desc: nuevoProg.desc, cohortes: [] }]);
     setNuevoProg({nombre: '', desc: ''});
     setErrorProg('');
+  };
+
+  const guardarEdicionProg = (id) => {
+    setProgramas(programas.map(p => p.id === id ? { ...p, nombre: editProgData.nombre, desc: editProgData.desc } : p));
+    setEditProgId(null);
+  };
+
+  const handleAddCohorte = (progId) => {
+    const nc = nuevasCohortes[progId];
+    if (!nc || !nc.nombre) {
+      setErroresCohorte({...erroresCohorte, [progId]: 'El nombre de la cohorte es obligatorio'});
+      return;
+    }
+    setProgramas(programas.map(p => {
+      if (p.id === progId) {
+        return { 
+          ...p, 
+          cohortes: [...p.cohortes, { id: nc.id || `c-${Date.now()}`, nombre: nc.nombre, abierta: nc.abierta !== false }] 
+        };
+      }
+      return p;
+    }));
+    setNuevasCohortes({ ...nuevasCohortes, [progId]: { id: '', nombre: '', abierta: true } });
+    setErroresCohorte({...erroresCohorte, [progId]: ''});
+  };
+
+  const iniciarEdicionCohorte = (cohorte) => {
+    setEditCohorteId(cohorte.id);
+    setEditCohorteData({ id: cohorte.id, nombre: cohorte.nombre, abierta: cohorte.abierta });
+  };
+
+  const guardarEdicionCohorte = (progId, oldCohorteId) => {
+    setProgramas(programas.map(p => {
+      if(p.id === progId) {
+        return {
+          ...p,
+          cohortes: p.cohortes.map(c => c.id === oldCohorteId ? { ...c, id: editCohorteData.id, nombre: editCohorteData.nombre, abierta: editCohorteData.abierta } : c)
+        };
+      }
+      return p;
+    }));
+    setEditCohorteId(null);
+  };
+
+  const toggleCohorteAbierta = (progId, cohorteId) => {
+     setProgramas(programas.map(p => {
+      if(p.id === progId) {
+        return {
+          ...p,
+          cohortes: p.cohortes.map(c => c.id === cohorteId ? { ...c, abierta: !c.abierta } : c)
+        };
+      }
+      return p;
+    }));
   };
 
   return (
@@ -50,10 +113,80 @@ export default function VistaPosgrados() {
       {programas.map((prog) => (
         <div key={prog.id} className="posgrado-card">
            <div className="posgrado-header">
-             <div>
-               <h3>{prog.nombre}</h3>
-               <p style={{color: '#666', fontSize: '14px', marginTop: '5px'}}>{prog.desc}</p>
+             {editProgId === prog.id ? (
+               <div style={{display: 'flex', gap: '10px', width: '100%', alignItems: 'center'}}>
+                 <input className="form-control" value={editProgData.nombre} onChange={e => setEditProgData({...editProgData, nombre: e.target.value})} />
+                 <input className="form-control" value={editProgData.desc} onChange={e => setEditProgData({...editProgData, desc: e.target.value})} />
+                 <button className="btn-primary" style={{padding: '8px 15px'}} onClick={() => guardarEdicionProg(prog.id)}>Guardar</button>
+                 <button className="btn-secondary" style={{padding: '8px 15px'}} onClick={() => setEditProgId(null)}>Cancelar</button>
+               </div>
+             ) : (
+               <>
+                 <div>
+                   <h3>{prog.nombre}</h3>
+                   <p style={{color: '#666', fontSize: '14px', marginTop: '5px'}}>{prog.desc}</p>
+                 </div>
+                 <div className="posgrado-actions">
+                   <span title="Editar Programa" onClick={() => {setEditProgId(prog.id); setEditProgData({nombre: prog.nombre, desc: prog.desc});}}>✏️ EDITAR</span>
+                 </div>
+               </>
+             )}
+           </div>
+           
+           <table style={{width: '100%', marginBottom: '10px', fontSize: '14px'}}>
+             <thead style={{color: '#666'}}>
+               <tr><th style={{padding: '5px 0'}}>Cohortes</th><th>ID</th><th>Abierta</th><th style={{textAlign: 'right'}}>Acciones</th></tr>
+             </thead>
+             <tbody>
+               {prog.cohortes.map((c, i) => (
+                 editCohorteId === c.id ? (
+                   <tr key={i} style={{borderBottom: '1px solid #eee', background: '#f0f8ff'}}>
+                     <td style={{padding: '5px 0'}}><input className="form-control" style={{padding: '5px'}} value={editCohorteData.nombre} onChange={e => setEditCohorteData({...editCohorteData, nombre: e.target.value})} /></td>
+                     <td><input className="form-control" style={{padding: '5px', width: '100px'}} value={editCohorteData.id} onChange={e => setEditCohorteData({...editCohorteData, id: e.target.value})} /></td>
+                     <td><input type="checkbox" checked={editCohorteData.abierta} onChange={e => setEditCohorteData({...editCohorteData, abierta: e.target.checked})} /></td>
+                     <td style={{textAlign: 'right'}}>
+                       <span style={{color: '#28a745', fontWeight: 'bold', cursor: 'pointer', marginRight: '15px'}} onClick={() => guardarEdicionCohorte(prog.id, c.id)}>GUARDAR</span>
+                       <span style={{color: '#dc3545', fontWeight: 'bold', cursor: 'pointer'}} onClick={() => setEditCohorteId(null)}>CANCELAR</span>
+                     </td>
+                   </tr>
+                 ) : (
+                   <tr key={i} style={{borderBottom: '1px solid #eee'}}>
+                     <td style={{padding: '10px 0'}}>{c.nombre}</td>
+                     <td>{c.id}</td>
+                     <td><input type="checkbox" checked={c.abierta} onChange={() => toggleCohorteAbierta(prog.id, c.id)} /></td>
+                     <td style={{textAlign: 'right'}}>
+                       <span style={{color: '#00539C', fontWeight: 'bold', cursor: 'pointer', marginRight: '15px'}} onClick={() => iniciarEdicionCohorte(c)}>✏️ EDITAR</span>
+                     </td>
+                   </tr>
+                 )
+               ))}
+             </tbody>
+           </table>
+
+           <div className="add-cohorte-row" style={{alignItems: 'flex-start'}}>
+             <div style={{flex: 1}}>
+                <input type="text" placeholder="ID (opcional)" className="form-control" 
+                       value={nuevasCohortes[prog.id]?.id || ''} 
+                       onChange={e => setNuevasCohortes({...nuevasCohortes, [prog.id]: {...nuevasCohortes[prog.id], id: e.target.value}})} />
              </div>
+             <div style={{flex: 2}}>
+                <input type="text" placeholder="Nombre de la nueva cohorte" className={`form-control ${erroresCohorte[prog.id] ? 'error' : ''}`} 
+                       value={nuevasCohortes[prog.id]?.nombre || ''} 
+                       onChange={e => {
+                         setNuevasCohortes({...nuevasCohortes, [prog.id]: {...nuevasCohortes[prog.id], nombre: e.target.value}});
+                         setErroresCohorte({...erroresCohorte, [progId]: ''});
+                       }} />
+                {erroresCohorte[prog.id] && <div className="error-text">{erroresCohorte[prog.id]}</div>}
+             </div>
+             <div style={{display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold', color: '#666', marginTop: '10px'}}>
+                <input type="checkbox" 
+                       checked={nuevasCohortes[prog.id]?.abierta !== false} 
+                       onChange={e => setNuevasCohortes({...nuevasCohortes, [prog.id]: {...nuevasCohortes[prog.id], abierta: e.target.checked}})} /> Abierta
+             </div>
+             <button style={{background: 'none', border: 'none', color: '#00539C', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px'}} 
+                     onClick={() => handleAddCohorte(prog.id)}>
+                AGREGAR COHORTE
+             </button>
            </div>
         </div>
       ))}
