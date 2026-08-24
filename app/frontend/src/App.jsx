@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import Preinscripcion from './components/preinscripcion';
 
 function Login({ onLogin }) {
   const [user, setUser] = useState('');
@@ -57,9 +58,7 @@ export default function App() {
           <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
           <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
         </nav>
-        <div style={{padding: '30px', textAlign: 'center'}}>
-          <h2>[Aquí va el Componente Preinscripcion de Valen]</h2>
-        </div>
+        <Preinscripcion />
       </>
     );
   }
