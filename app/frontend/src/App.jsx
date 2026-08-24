@@ -21,14 +21,20 @@ export default function VistaPosgrados() {
   const [nuevoProg, setNuevoProg] = useState({ nombre: '', desc: '' });
   const [errorProg, setErrorProg] = useState('');
   
+  // Estados de Edicion de Programa
   const [editProgId, setEditProgId] = useState(null);
   const [editProgData, setEditProgData] = useState({ nombre: '', desc: '' });
 
+  // Estados de Edicion de Cohorte
   const [editCohorteId, setEditCohorteId] = useState(null);
   const [editCohorteData, setEditCohorteData] = useState({ id: '', nombre: '', abierta: true });
 
   const [nuevasCohortes, setNuevasCohortes] = useState({});
   const [erroresCohorte, setErroresCohorte] = useState({});
+
+  // NUEVO: Estados aislados para la confirmación en línea (Solo afecta a Lautaro)
+  const [confirmDeleteProg, setConfirmDeleteProg] = useState(null);
+  const [confirmDeleteCohorte, setConfirmDeleteCohorte] = useState(null);
 
   const handleAgregarPrograma = () => {
     if(!nuevoProg.nombre) {
@@ -38,6 +44,11 @@ export default function VistaPosgrados() {
     setProgramas([...programas, { id: Date.now(), nombre: nuevoProg.nombre, desc: nuevoProg.desc, cohortes: [] }]);
     setNuevoProg({nombre: '', desc: ''});
     setErrorProg('');
+  };
+
+  const handleBorrarPrograma = (id) => {
+    setProgramas(programas.filter(p => p.id !== id));
+    setConfirmDeleteProg(null);
   };
 
   const guardarEdicionProg = (id) => {
@@ -62,6 +73,16 @@ export default function VistaPosgrados() {
     }));
     setNuevasCohortes({ ...nuevasCohortes, [progId]: { id: '', nombre: '', abierta: true } });
     setErroresCohorte({...erroresCohorte, [progId]: ''});
+  };
+
+  const handleBorrarCohorte = (progId, cohorteId) => {
+    setProgramas(programas.map(p => {
+      if(p.id === progId) {
+        return { ...p, cohortes: p.cohortes.filter(c => c.id !== cohorteId) };
+      }
+      return p;
+    }));
+    setConfirmDeleteCohorte(null);
   };
 
   const iniciarEdicionCohorte = (cohorte) => {
@@ -127,7 +148,18 @@ export default function VistaPosgrados() {
                    <p style={{color: '#666', fontSize: '14px', marginTop: '5px'}}>{prog.desc}</p>
                  </div>
                  <div className="posgrado-actions">
-                   <span title="Editar Programa" onClick={() => {setEditProgId(prog.id); setEditProgData({nombre: prog.nombre, desc: prog.desc});}}>✏️ EDITAR</span>
+                   {confirmDeleteProg === prog.id ? (
+                     <div className="confirm-delete-box">
+                       <span style={{color: '#dc3545', fontWeight: 'bold'}}>¿Desea eliminarlo?</span>
+                       <button className="btn-danger-sm" onClick={() => handleBorrarPrograma(prog.id)}>Aceptar</button>
+                       <button className="btn-cancel-sm" onClick={() => setConfirmDeleteProg(null)}>Cancelar</button>
+                     </div>
+                   ) : (
+                     <>
+                       <span title="Editar Programa" onClick={() => {setEditProgId(prog.id); setEditProgData({nombre: prog.nombre, desc: prog.desc});}}>✏️ EDITAR</span>
+                       <span title="Eliminar Programa" onClick={() => setConfirmDeleteProg(prog.id)}>🗑️ ELIMINAR</span>
+                     </>
+                   )}
                  </div>
                </>
              )}
@@ -155,7 +187,18 @@ export default function VistaPosgrados() {
                      <td>{c.id}</td>
                      <td><input type="checkbox" checked={c.abierta} onChange={() => toggleCohorteAbierta(prog.id, c.id)} /></td>
                      <td style={{textAlign: 'right'}}>
-                       <span style={{color: '#00539C', fontWeight: 'bold', cursor: 'pointer', marginRight: '15px'}} onClick={() => iniciarEdicionCohorte(c)}>✏️ EDITAR</span>
+                       {confirmDeleteCohorte === c.id ? (
+                         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px'}}>
+                           <span style={{color: '#dc3545', fontWeight: 'bold'}}>¿Eliminar?</span>
+                           <button className="btn-danger-sm" onClick={() => handleBorrarCohorte(prog.id, c.id)}>Aceptar</button>
+                           <button className="btn-cancel-sm" onClick={() => setConfirmDeleteCohorte(null)}>Cancelar</button>
+                         </div>
+                       ) : (
+                         <>
+                           <span style={{color: '#00539C', fontWeight: 'bold', cursor: 'pointer', marginRight: '15px'}} onClick={() => iniciarEdicionCohorte(c)}>✏️ EDITAR</span>
+                           <span style={{cursor: 'pointer', color: '#666'}} onClick={() => setConfirmDeleteCohorte(c.id)}>🗑️ ELIMINAR</span>
+                         </>
+                       )}
                      </td>
                    </tr>
                  )
