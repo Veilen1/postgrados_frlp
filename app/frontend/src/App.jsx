@@ -4,9 +4,9 @@ import './App.css';
 import Preinscripcion from './components/preinscripcion.jsx';
 import PanelDocente from './components/panelDocente.jsx';
 import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.jsx';
-import PanelConduccionInscripciones from './components/PanelConduccionInscripciones.jsx';
+import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
 import VistaPostgrados from './components/VistaPostgrados.jsx';
-import VistaEstadisticas from './components/VistaEstadisticas.jsx';
+import { VistaEstadisticas } from './components/VistaEstadisticas.jsx';
 
 // --- LOGIN ---
 function Login({ onLogin }) {

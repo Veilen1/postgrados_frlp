@@ -28,7 +28,8 @@ export const PanelConduccionInscripciones = () => {
     const query = busqueda.trim().toLowerCase();
 
     return MOCK_INSCRIPCIONES.filter((item) => {
-    // Búsqueda flexible por nombre de alumno o número de legajo (encuentra coincidencias aunque haya pequeños errores al escribir)      const coincideTexto =
+      // Búsqueda flexible por nombre de alumno o número de legajo (encuentra coincidencias aunque haya pequeños errores al escribir)
+      const coincideTexto =
         query === '' ||
         item.alumno.toLowerCase().includes(query) ||
         item.legajo.toLowerCase().includes(query);
@@ -56,10 +57,6 @@ export const PanelConduccionInscripciones = () => {
           {inscripcionesFiltradas.length} resultados
         </span>
       </header>
-      
-      {/* --------------------------------------------------------------------- */}
-      /* BARRA DE FILTROS CRUZADOS                                             */
-      {/* --------------------------------------------------------------------- */}
       <div className="filtros-bar" role="search" aria-label="Filtros de inscripciones">
         <input
           type="text"
@@ -69,7 +66,6 @@ export const PanelConduccionInscripciones = () => {
           onChange={(e) => setBusqueda(e.target.value)}
           aria-label="Buscar alumno o legajo"
         />
-
         <select 
           className="select-filter"
           value={filtroPosgrado} 
@@ -104,9 +100,6 @@ export const PanelConduccionInscripciones = () => {
         </button>
       </div>
 
-      {/* --------------------------------------------------------------------- */}
-      /* TABLA DE RESULTADOS                                                   */
-      {/* --------------------------------------------------------------------- */}
       <div className="table-responsive">
         <table className="tabla-custom">
           <thead>

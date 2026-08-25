@@ -17,10 +17,6 @@ export const VistaEstadisticas = () => {
       <header className="panel-header">
         <h2>Métricas y Estadísticas Generales</h2>
       </header>
-
-      {/* --------------------------------------------------------------------- */}
-      /* SECCIÓN DE TARJETAS KPI (Key Performance Indicators)                 */
-      {/* --------------------------------------------------------------------- */}
       <section className="metrics-grid" aria-label="Indicadores clave de rendimiento">
         <article className="metric-card">
           <span className="metric-title">Total Inscriptos</span>
@@ -43,11 +39,6 @@ export const VistaEstadisticas = () => {
         </article>
       </section>
 
-      {/* --------------------------------------------------------------------- */}
-      /* GRÁFICO DE BARRAS DINÁMICO EN CSS PURO                                */
-      /* No requiere librerías pesadas como Chart.js / D3.js para métricas    */
-      /* simples, lo que reduce significativamente el Bundle Size.            */
-      {/* --------------------------------------------------------------------- */}
       <section className="chart-section">
         <h3>Demanda por Programa Académico</h3>
 
