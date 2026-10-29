@@ -21,3 +21,4 @@ async def test_health_check_endpoint(client: AsyncClient):
     assert data["service"] == "postgrado-backend"
     assert data["version"] == "1.0.0"
     assert data["database"] == "connected"
+

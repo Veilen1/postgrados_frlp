@@ -20,3 +20,4 @@ async def client():
         base_url="http://test"
     ) as ac:
         yield ac
+

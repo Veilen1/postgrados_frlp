@@ -79,34 +79,45 @@ Lee en este orden antes de escribir código:
 
 ## Quickstart — Levantá el entorno en 5 minutos
 
-> **Requisitos previos:** Git · Docker Desktop · Node.js 20+ (o Python 3.11+)
+> **Requisitos previos:** Git · Docker Engine / Docker Desktop (Compose v2)
+
+### 1. Comandos Estándar Multiplataforma (Linux / Windows / macOS)
 
 ```bash
-# 1. Cloná tu repositorio (URL provisto por GitHub)
-git clone https://github.com/desasoftfrlptn/postgrados_frlp.git
-cd postgrado-[NOMBRE-EQUIPO]
-
-# 2. Configurá variables de entorno
+# 1. Configurá variables de entorno (solo la primera vez)
 cp .env.example .env
 
-# 3. Levantá los servicios (base de datos + backend + frontend)
-docker-compose up -d
+# 2. Levantá los servicios (PostgreSQL 16 Alpine + FastAPI 3.12 + React 19)
+docker compose up -d
 
-# 4. Instalá dependencias
-npm install        # Si usás Node/NestJS
-# -- ó --
-pip install -r requirements.txt  # Si usás Python/FastAPI
+# 3. Verificá el estado y healthchecks de los contenedores
+docker compose ps
 
-# 5. Ejecutá las migraciones de base de datos
-npm run db:migrate   # Prisma
-# -- ó --
-alembic upgrade head  # SQLAlchemy
-
-# 6. Iniciá el servidor de desarrollo
-npm run dev
+# 4. Ejecutá la suite de pruebas automatizadas en el backend
+docker compose exec backend pytest -v
 ```
 
-✅ **Criterio de éxito:** La app corre en `http://localhost:3000` sin errores en consola.
+✅ **Criterio de éxito:** 
+- Backend API & Swagger: `http://localhost:8000/api/docs`
+- Healthcheck activo: `http://localhost:8000/api/v1/health`
+- Frontend UI: `http://localhost:3000`
+
+---
+
+### 2. Atajos de Productividad con `make` (Opcional — Linux / macOS / WSL)
+
+Si contás con la utilidad `make` instalada (estándar en Linux, macOS o Windows bajo WSL), podés utilizar los atajos simplificados:
+
+| Comando Make | Equivalente Docker Compose | Descripción |
+|---|---|---|
+| `make up` | `docker compose up -d` | Levanta el entorno completo en background. |
+| `make status` | `docker compose ps` | Inspecciona el estado y healthcheck. |
+| `make test` | `docker compose exec backend pytest -v` | Corre la suite de pruebas Pytest. |
+| `make logs` | `docker compose logs -f` | Monitorea logs en tiempo real. |
+| `make db-shell` | `docker compose exec db psql -U ...` | Abre la consola interactiva de PostgreSQL. |
+| `make down` | `docker compose down` | Detiene y remueve los contenedores. |
+
+> **Nota para usuarios de Windows nativo (PowerShell / CMD):** Si no tenés `make` instalado en tu terminal de Windows, ejecutá directamente los comandos estándar de la sección 1.
 
 ---
 

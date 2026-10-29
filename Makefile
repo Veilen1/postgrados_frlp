@@ -1,5 +1,7 @@
 # =============================================================================
 # Makefile — Comandos Rápidos de Desarrollo y Testing (Sistema Posgrado UTN)
+# Diseñado para entornos Linux, macOS y Windows (WSL / Git Bash).
+# En Windows nativo (PowerShell/CMD), utilizar comandos docker compose directos.
 # =============================================================================
 
 .PHONY: help up down restart logs status test test-cov db-shell clean
@@ -39,3 +41,4 @@ db-shell: ## Abre una terminal interactiva de PostgreSQL (psql)
 
 clean: ## Detiene contenedores y elimina volúmenes de datos (RESET COMPLETO)
 	docker compose down -v
+
