@@ -59,6 +59,8 @@ services:
     volumes:
       # Montaje de código para desarrollo con live-reload sin romper paquetes instalados
       - ./app/backend/src:/app/src
+      - ./app/backend/tests:/app/tests:ro
+      - ./app/backend/pytest.ini:/app/pytest.ini:ro
       - postgrado-storage:/var/postgrado-storage
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" || exit 1"]
