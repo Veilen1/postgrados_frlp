@@ -35,9 +35,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
 
-# Copiar virtualenv preinstalado desde el builder
-COPY --from=builder /opt/venv /opt/venv
-
 # Creación de usuario sin privilegios (Principio de Menor Privilegio)
 RUN groupadd -g 10001 appgroup && \
     useradd -u 10001 -g appgroup -s /sbin/nologin -M appuser
@@ -47,9 +44,21 @@ RUN mkdir -p /var/postgrado-storage/uploads && \
     chown -R appuser:appgroup /app /var/postgrado-storage
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STAGE 3: Development (Target para docker-compose con live-reload)
+# STAGE 3: Development dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+FROM builder AS development-builder
+
+COPY requirements-dev.txt .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r requirements-dev.txt
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 4: Development (Target para docker-compose con live-reload)
 # ─────────────────────────────────────────────────────────────────────────────
 FROM runtime-base AS development
+
+COPY --from=development-builder /opt/venv /opt/venv
+COPY --chown=appuser:appgroup pyproject.toml /app/pyproject.toml
 
 USER appuser
 
@@ -61,10 +70,11 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STAGE 4: Production (Inmutable)
+# STAGE 5: Production (Inmutable)
 # ─────────────────────────────────────────────────────────────────────────────
 FROM runtime-base AS production
 
+COPY --from=builder /opt/venv /opt/venv
 COPY --chown=appuser:appgroup ./src /app/src
 
 USER appuser
