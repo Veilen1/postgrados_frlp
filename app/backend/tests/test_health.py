@@ -76,3 +76,5 @@ async def test_openapi_uses_documented_api_path(client: AsyncClient) -> None:
     assert "/api/v1/auth/login" in response.json()["paths"]
     assert "/api/v1/auth/refresh" in response.json()["paths"]
     assert "/api/v1/auth/me" in response.json()["paths"]
+    assert "/api/v1/cohortes" in response.json()["paths"]
+    assert "/api/v1/cohortes/{cohort_id}/estado" in response.json()["paths"]

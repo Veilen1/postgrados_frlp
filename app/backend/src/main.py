@@ -52,6 +52,8 @@ async def authentication_error_handler(
         if exception.status_code == 401
         else "FORBIDDEN"
         if exception.status_code == 403
+        else "NOT_FOUND"
+        if exception.status_code == 404
         else "VALIDATION_ERROR"
     )
     return JSONResponse(

@@ -5,6 +5,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from src.cohortes.models import Cohorte  # noqa: F401
 from src.main import app
 from src.shared.database import Base, get_db
 from src.shared.models import RefreshSession, User  # noqa: F401

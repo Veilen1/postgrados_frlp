@@ -16,12 +16,12 @@ from src.shared.models import User
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+async def get_optional_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
+) -> User | None:
     if credentials is None:
-        raise AuthenticationError()
+        return None
 
     try:
         claims = decode_access_token(credentials.credentials)
@@ -31,6 +31,14 @@ async def get_current_user(
 
     user = await db.scalar(select(User).where(User.id == user_id))
     if user is None or not user.activo:
+        raise AuthenticationError()
+    return user
+
+
+async def get_current_user(
+    user: Annotated[User | None, Depends(get_optional_current_user)],
+) -> User:
+    if user is None:
         raise AuthenticationError()
     return user
 
