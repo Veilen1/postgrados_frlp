@@ -29,6 +29,8 @@ ejecución local fuera de Docker, el mismo comando se ejecuta manualmente desde
 
 - Los cambios de esquema posteriores se agregan como revisiones Alembic; no se editan
   scripts de inicialización para modificar una base existente.
+- La comparación de Alembic solo incluye tablas representadas en el metadata de SQLAlchemy;
+  las tablas del bootstrap todavía no mapeadas se conservan y no se proponen para borrado.
 - Una base vacía requiere primero el bootstrap `init.sql`; luego Alembic aplica las
   migraciones incrementales.
 - El historial de revisiones queda versionado junto al código y permite revisar y revertir

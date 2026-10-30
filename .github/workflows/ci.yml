@@ -50,7 +50,7 @@ jobs:
 
       - name: Ejecutar tests
         working-directory: app/backend
-        run: pytest --cov=src.shared.api --cov-report=term-missing --cov-fail-under=70
+        run: pytest --cov=src.auth --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing --cov-fail-under=70
 
   build:
     name: Build de producción

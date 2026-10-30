@@ -47,17 +47,38 @@ El endpoint `/api/v1/health` comprueba la conexión a PostgreSQL y
 Desde `app/backend`:
 
 ```powershell
-python -m pytest
+python -m pytest --cov=src.auth --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing
 ```
 
-## Endpoints implementados en esta base
+## Endpoints implementados
 
 | Método | Ruta | Uso |
 |---|---|---|
+| `POST` | `/api/v1/auth/registro-aspirante` | Crea una cuenta activa con rol `ASPIRANTE`; no crea un legajo ni inicia sesión |
+| `POST` | `/api/v1/auth/login` | Valida email/contraseña y entrega access token y refresh token |
+| `POST` | `/api/v1/auth/refresh` | Rota el refresh token de un solo uso y emite una nueva pareja de tokens |
+| `GET` | `/api/v1/auth/me` | Devuelve el perfil activo asociado al access token Bearer |
 | `GET` | `/api/v1/health` | Healthcheck de la API y PostgreSQL |
 | `GET` | `/api/v1/health/ready` | Readiness de la API y PostgreSQL |
 | `GET` | `/api/v1/health/live` | Liveness de la API |
 
-Los endpoints de autenticación, cohortes, legajos y documentos se implementarán como casos
-de uso del Core siguiendo la matriz y las reglas de autorización de
+### Contratos de autenticación
+
+El registro recibe `email`, `password`, `nombre` y `apellido`. El email se normaliza a
+minúsculas, y la contraseña debe tener entre 12 y 72 bytes UTF-8. El login recibe `email` y
+`password`; el refresh recibe `refresh_token`. Las respuestas de login y refresh incluyen
+`access_token`, `refresh_token`, `token_type`, `expires_in` y el perfil `user`.
+
+Los access tokens usan HS256 y vencen en 8 horas por defecto. Los refresh tokens son
+opacos, vencen en 7 días y se rotan al usarse; la base persiste únicamente su hash. La
+cuenta se consulta al autenticar cada request, por lo que cuentas inactivas o eliminadas
+no pueden seguir usando un access token vigente. Las respuestas de autenticación y
+autorización siguen el formato de error de
 [`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).
+
+La variable `JWT_SECRET` debe tener al menos 32 bytes. El secreto de desarrollo incluido
+en Compose/`.env.example` no debe usarse fuera de desarrollo; en otros entornos la API
+rechaza el valor de desarrollo por defecto.
+
+Todavía no están implementados cohortes, legajos ni documentos. Sus reglas y endpoints se
+encuentran en [`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).

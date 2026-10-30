@@ -6,7 +6,7 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.coverage.run]
-source = ["src.shared.api"]
+source = ["src.auth", "src.shared.auth", "src.shared.api"]
 branch = true
 
 [tool.coverage.report]

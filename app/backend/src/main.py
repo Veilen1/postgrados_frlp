@@ -1,10 +1,13 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.shared.api.router import api_router
+from src.shared.auth.errors import AuthenticationError
 from src.shared.config import get_settings
 from src.shared.database import engine
 
@@ -37,3 +40,27 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.exception_handler(AuthenticationError)
+async def authentication_error_handler(
+    _: Request,
+    exception: AuthenticationError,
+) -> JSONResponse:
+    error = (
+        "UNAUTHORIZED"
+        if exception.status_code == 401
+        else "FORBIDDEN"
+        if exception.status_code == 403
+        else "VALIDATION_ERROR"
+    )
+    return JSONResponse(
+        status_code=exception.status_code,
+        headers=exception.headers,
+        content={
+            "statusCode": exception.status_code,
+            "error": error,
+            "message": exception.detail,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    )

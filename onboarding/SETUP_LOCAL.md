@@ -219,7 +219,7 @@ Para no tener que escribir comandos largos de Docker en cada iteración, el proy
 docker compose exec backend pytest
 
 # Con reporte de cobertura detallado
-docker compose exec backend pytest --cov=src.shared.api --cov-report=term-missing
+docker compose exec backend pytest --cov=src.auth --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing
 
 # Solo tests de un módulo (más rápido durante desarrollo)
 docker compose exec backend pytest tests/inscripcion/

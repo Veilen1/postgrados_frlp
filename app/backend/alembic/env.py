@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import src.shared.models  # noqa: F401
 from alembic import context
 from src.shared.config import get_settings
 from src.shared.database import Base
@@ -16,10 +17,23 @@ config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%"
 target_metadata = Base.metadata
 
 
+def include_object(
+    obj: object,
+    _name: str,
+    type_: str,
+    reflected: bool,
+    compare_to: object | None,
+) -> bool:
+    if reflected and compare_to is None:
+        return type_ != "table" and getattr(obj, "table", None) is None
+    return True
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=get_settings().database_url,
         target_metadata=target_metadata,
+        include_object=include_object,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
@@ -32,6 +46,7 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
+        include_object=include_object,
         compare_type=True,
     )
     with context.begin_transaction():
