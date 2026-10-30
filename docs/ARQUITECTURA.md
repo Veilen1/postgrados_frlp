@@ -587,6 +587,10 @@ CREATE TABLE cohortes (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   anio        INTEGER NOT NULL,
   nombre      VARCHAR(50) NOT NULL UNIQUE,
+  carrera     VARCHAR(100) NOT NULL,
+  codigo_carrera VARCHAR(4),
+  numero_cohorte INTEGER,
+  ultimo_numero_legajo INTEGER NOT NULL DEFAULT 0,
   abierta     BOOLEAN NOT NULL DEFAULT false,
   fecha_inicio DATE,
   created_at  TIMESTAMP DEFAULT NOW()
@@ -594,7 +598,7 @@ CREATE TABLE cohortes (
 
 CREATE TABLE legajos (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  numero_legajo   VARCHAR(20) UNIQUE,   -- Ej: "26-001-045" (se asigna al aprobar)
+  numero_legajo   VARCHAR(30) UNIQUE,   -- Ej: "26-MISI-01-045" (se asigna al aprobar)
   cohorte_id      UUID NOT NULL REFERENCES cohortes(id),
   dni             VARCHAR(20) NOT NULL,
   apellido        VARCHAR(100) NOT NULL,

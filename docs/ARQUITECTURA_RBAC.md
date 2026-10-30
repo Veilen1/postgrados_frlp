@@ -200,8 +200,14 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 | Endpoint | Método | Roles Permitidos | Regla de Titularidad | Códigos HTTP | Propósito |
 |---|:---:|---|---|:---:|---|
 | `/api/v1/cohortes` | `GET` | *Público* (solo abiertas) / Todos | N/A | `200` | Listado de carreras y cohortes con inscripción vigente. |
-| `/api/v1/cohortes` | `POST` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `201`, `400`, `401`, `403` | Apertura de una nueva cohorte académica. |
+| `/api/v1/cohortes` | `POST` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `201`, `400`, `401`, `403`, `409` | Apertura de una cohorte con código de carrera y ordinal anual. |
 | `/api/v1/cohortes/{id}/estado` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `200`, `404`, `401`, `403` | Cierre o apertura del período de inscripción. |
+| `/api/v1/cohortes/{id}/identificador` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | Puede completar cohortes heredadas; no permite cambiar el identificador después de emitir un número descriptivo. | `200`, `400`, `401`, `403`, `404`, `409` | Completa o corrige el código y ordinal de una cohorte existente. |
+
+El código identifica de forma estable a la carrera: no puede reutilizarse para otra carrera
+ni cambiarse entre cohortes de la misma carrera. El ordinal (1-99) distingue cohortes de una
+carrera dentro del año. Las cohortes heredadas pueden completar estos datos antes de emitir
+números; después, el identificador queda bloqueado para preservar la trazabilidad.
 
 ### 5.3 Legajos y Preinscripción (`/api/v1/legajos`)
 
@@ -220,9 +226,11 @@ usa el perfil autenticado y una cohorte abierta; los datos no presentes en la ta
 (nacionalidad, domicilio y antecedentes académicos del formulario visual) quedan fuera de
 este contrato hasta acordar una migración. La API documental acepta PDF de hasta 5 MB,
 valida la firma `%PDF` y almacena el archivo fuera del directorio público usando nombres
-generados por el servidor. El envío exige documentos `DNI` y `TITULO_GRADO`. La transición a
-`APROBADO` queda pendiente de definir cómo se genera el segmento de cohorte del
-`numero_legajo` (`YY-NNN-CCC`); hasta entonces la API la rechaza explícitamente.
+generados por el servidor. El envío exige documentos `DNI` y `TITULO_GRADO`. Al aprobar se
+genera `numero_legajo` con el formato descriptivo `YY-CCCC-CC-NNN`; su justificación y las
+reglas de asignación están en [`DECISION_FORMATO_NUMERO_LEGAJO.md`](DECISION_FORMATO_NUMERO_LEGAJO.md).
+La respuesta del legajo incorpora el nombre oficial del posgrado y de la cohorte junto con
+el identificador, para que el operador no dependa de memorizar el código abreviado.
 
 ### 5.4 Gestión Documental (`/api/v1/legajos/{id}/documentos` y `/api/v1/documentos`)
 
@@ -273,7 +281,7 @@ Las transiciones de estado son atómicas y están gobernadas por reglas de negoc
 | `ENVIADO` | `EN_REVISION` | `ADMIN_POSGRADO`, `SUPERADMIN` | Bloquea modificaciones y asigna auditor. |
 | `EN_REVISION` | `OBSERVADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | Requiere ingresar `motivo_observacion`. Habilita al `ASPIRANTE` a reemplazar documentos o corregir datos. |
 | `OBSERVADO` | `ENVIADO` | `ASPIRANTE` | Re-envío tras subsanar las observaciones señaladas. |
-| `EN_REVISION` | `APROBADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Genera `numero_legajo` único (formato `YY-NNN-CCC`), actualiza rol de usuario a `ALUMNO` y bloquea modificaciones futuras. |
+| `EN_REVISION` | `APROBADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Genera `numero_legajo` único (`YY-CCCC-CC-NNN`), actualiza rol de usuario a `ALUMNO` y bloquea modificaciones futuras. |
 | `EN_REVISION` | `RECHAZADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Requiere motivo formal de rechazo. Cierra el legajo. |
 
 ---

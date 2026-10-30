@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_cohortes_abierta ON cohortes(abierta);
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS legajos (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    numero_legajo      VARCHAR(30) UNIQUE, -- Formato: AÑO-COHORTE-SECUENCIAL (ej: 26-001-045)
+    numero_legajo      VARCHAR(30) UNIQUE, -- Se asigna al aprobar el legajo
     usuario_id         UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cohorte_id         UUID NOT NULL REFERENCES cohortes(id),
     dni                VARCHAR(20) NOT NULL,

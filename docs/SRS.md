@@ -159,8 +159,8 @@ El sistema controla el ciclo de vida del legajo con transiciones definidas por r
 ```gherkin
 Escenario: Generación de número de legajo
   Cuando el coordinador aprueba un legajo
-  Entonces se genera número único con formato: AÑO-COHORTE-SECUENCIAL
-  Ejemplo: "26-001-045" → año 2026, cohorte 1, estudiante 45
+  Entonces se genera número único con formato: YY-CCCC-CC-NNN
+  Ejemplo: "26-MISI-01-045" → cohorte 2026, carrera MISI, cohorte 1, alumno 45
 
 Escenario: Notificación por observación
   Cuando el coordinador observa con comentario "Falta copia del título"

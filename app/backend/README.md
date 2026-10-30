@@ -61,6 +61,7 @@ python -m pytest --cov=src.auth --cov=src.legajos --cov=src.shared.auth --cov=sr
 | `GET` | `/api/v1/cohortes` | Lista cohortes abiertas públicamente y todas las cohortes para usuarios autenticados |
 | `POST` | `/api/v1/cohortes` | Crea una cohorte; requiere rol `ADMIN_POSGRADO` o `SUPERADMIN` |
 | `PATCH` | `/api/v1/cohortes/{cohort_id}/estado` | Abre/cierra inscripciones; requiere rol `ADMIN_POSGRADO` o `SUPERADMIN` |
+| `PATCH` | `/api/v1/cohortes/{cohort_id}/identificador` | Asigna código de carrera y ordinal a una cohorte existente sin identificador |
 | `POST` | `/api/v1/legajos` | Crea el borrador de preinscripción del aspirante en una cohorte abierta |
 | `GET` | `/api/v1/legajos/mi-legajo` | Consulta el legajo propio de un aspirante o alumno |
 | `GET` | `/api/v1/legajos/{legajo_id}` | Consulta el legajo propio o, para administración, cualquier legajo |
@@ -98,17 +99,23 @@ funciona para su titular mientras está en estado `BORRADOR` u `OBSERVADO`.
 La consulta administrativa admite `page` (1 en adelante), `page_size` (máximo 100),
 `cohorte_id` y `estado`. Para revisar un legajo, administración puede transicionar
 `ENVIADO` a `EN_REVISION`, y luego a `OBSERVADO` o `RECHAZADO` (estos últimos requieren
-`motivo_observacion`). `APROBADO` todavía no está habilitado porque falta acordar la regla
-de generación de `numero_legajo`.
+`motivo_observacion`). Al aprobar, se asigna el número de legajo y se promueve el usuario
+a `ALUMNO` dentro de la misma transacción.
 
 ### Contratos de cohortes
 
-La creación recibe `anio`, `nombre`, `carrera`, `tipo_carrera` (`Especializacion`,
+La creación recibe `anio`, `nombre`, `carrera`, `codigo_carrera` (cuatro caracteres
+alfanuméricos en mayúsculas), `numero_cohorte` (1-99), `tipo_carrera` (`Especializacion`,
 `Maestria` o `Doctorado`) y opcionalmente `abierta` (por defecto `false`) y `fecha_inicio`.
-El nombre es único. El listado público solo expone cohortes con inscripción abierta;
+El nombre es único; también lo es la combinación de año, código de carrera y ordinal. El
+código se conserva entre cohortes de la misma carrera. El listado público solo expone
+cohortes con inscripción abierta;
 cualquier usuario autenticado puede consultar también las cerradas. Un token Bearer
 inválido se rechaza incluso en el listado público. La tabla `cohortes` ya forma parte del
-bootstrap `init.sql`, por lo que este módulo no requiere una migración nueva.
+bootstrap `init.sql`; la migración `0003_descriptive_legajo_numbers` agrega estos campos
+en bases existentes y conserva los números históricos. Las cohortes históricas pueden
+completar su código aunque ya tengan números anteriores; el identificador queda bloqueado
+una vez que se emite un número con el formato descriptivo.
 
 ### Contratos de autenticación
 
@@ -141,7 +148,16 @@ por el cliente; el listado no expone rutas internas ni checksums. La carga y eli
 requieren que el titular tenga su legajo en estado `BORRADOR` u `OBSERVADO`. El envío valida
 la presencia de `DNI` y `TITULO_GRADO`.
 
-La aprobación sigue pendiente hasta definir la generación del número de legajo `YY-NNN-CCC`;
-el endpoint devuelve un error explícito mientras no exista esa regla. Los campos del
-formulario visual que no existen en el esquema actual quedan fuera de esta API. Los contratos RBAC completos están en
+La cohorte incluye código de carrera de cuatro caracteres y ordinal entre 1 y 99 por carrera
+y año. El backend exige que el código se mantenga estable para la misma carrera; para los
+registros anteriores sin ese dato, administración puede usar el endpoint
+`PATCH /api/v1/cohortes/{cohort_id}/identificador` antes de emitir un número descriptivo.
+Al aprobar un legajo `EN_REVISION`, el backend genera `YY-CCCC-CC-NNN`, actualiza el rol a
+`ALUMNO` y guarda la transición, fecha y contador de cohorte en una sola transacción. El
+contador es secuencial por cohorte y admite hasta 999 alumnos. La respuesta del legajo
+incluye el nombre completo del posgrado y de la cohorte para que el operador vea el contexto
+junto al número. La decisión y la razón del cambio están documentadas en
+[`docs/DECISION_FORMATO_NUMERO_LEGAJO.md`](../../docs/DECISION_FORMATO_NUMERO_LEGAJO.md).
+Los campos del formulario visual que no existen en el esquema actual quedan fuera de esta
+API. Los contratos RBAC completos están en
 [`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).

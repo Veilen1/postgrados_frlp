@@ -5,6 +5,7 @@ from fastapi import status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.cohortes.models import Cohorte
 from src.legajos.models import AuditoriaLegajo, Documento, Legajo
@@ -44,7 +45,7 @@ async def create_legajo(
     user: User,
 ) -> Legajo:
     user_id = user.id
-    await _get_open_cohorte(db, payload.cohorte_id)
+    cohorte = await _get_open_cohorte(db, payload.cohorte_id)
     existing = await db.scalar(select(Legajo.id).where(Legajo.usuario_id == user_id))
     if existing is not None:
         raise _conflict("El usuario ya tiene un legajo")
@@ -60,6 +61,7 @@ async def create_legajo(
         estado=LegajoEstado.BORRADOR.value,
         solicita_beca=payload.solicita_beca,
         tipo_beca=payload.tipo_beca,
+        cohorte=cohorte,
     )
     db.add(legajo)
     db.add(
@@ -91,6 +93,7 @@ async def create_legajo(
         raise
 
     await db.refresh(legajo)
+    await db.refresh(legajo, attribute_names=["cohorte"])
     return legajo
 
 
@@ -111,6 +114,7 @@ async def list_legajos(
     total = await db.scalar(select(func.count(Legajo.id)).where(*filters))
     query = (
         select(Legajo)
+        .options(selectinload(Legajo.cohorte))
         .where(*filters)
         .order_by(Legajo.created_at.desc(), Legajo.id)
         .offset((page - 1) * page_size)
@@ -120,14 +124,18 @@ async def list_legajos(
 
 
 async def get_legajo(db: AsyncSession, legajo_id: UUID) -> Legajo:
-    legajo = await db.get(Legajo, legajo_id)
+    legajo = await db.scalar(
+        select(Legajo).options(selectinload(Legajo.cohorte)).where(Legajo.id == legajo_id)
+    )
     if legajo is None:
         raise _not_found("No se encontró el legajo")
     return legajo
 
 
 async def get_my_legajo(db: AsyncSession, user_id: UUID) -> Legajo:
-    legajo = await db.scalar(select(Legajo).where(Legajo.usuario_id == user_id))
+    legajo = await db.scalar(
+        select(Legajo).options(selectinload(Legajo.cohorte)).where(Legajo.usuario_id == user_id)
+    )
     if legajo is None:
         raise _not_found("El usuario todavía no tiene un legajo")
     return legajo
@@ -158,7 +166,7 @@ async def update_legajo(
     changes = payload.model_dump(exclude_unset=True)
     cohorte_id = changes.get("cohorte_id")
     if cohorte_id is not None:
-        await _get_open_cohorte(db, cohorte_id)
+        legajo.cohorte = await _get_open_cohorte(db, cohorte_id)
     updated_cohorte_id = cohorte_id or legajo.cohorte_id
     updated_dni = changes.get("dni", legajo.dni)
     for field, value in changes.items():
@@ -234,17 +242,23 @@ async def update_legajo_state(
     payload: LegajoEstadoUpdate,
     user: User,
 ) -> Legajo:
-    target_state = payload.estado.value
-    if target_state == LegajoEstado.APROBADO.value:
-        raise AuthenticationError(
-            "La aprobación está pendiente de definir la generación del número de legajo",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+    locked_legajo = await db.scalar(
+        select(Legajo)
+        .where(Legajo.id == legajo.id)
+        .options(selectinload(Legajo.cohorte))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked_legajo is None:
+        raise _not_found("No se encontró el legajo")
+    legajo = locked_legajo
 
+    target_state = payload.estado.value
     allowed_transitions = {
         LegajoEstado.ENVIADO.value: {LegajoEstado.EN_REVISION.value},
         LegajoEstado.EN_REVISION.value: {
             LegajoEstado.OBSERVADO.value,
+            LegajoEstado.APROBADO.value,
             LegajoEstado.RECHAZADO.value,
         },
     }
@@ -253,6 +267,56 @@ async def update_legajo_state(
             f"No se permite la transición de {legajo.estado} a {target_state}",
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+
+    if target_state == LegajoEstado.APROBADO.value:
+        cohort = await db.scalar(
+            select(Cohorte)
+            .where(Cohorte.id == legajo.cohorte_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if cohort is None:
+            raise _not_found("No se encontró la cohorte del legajo")
+        if cohort.codigo_carrera is None or cohort.numero_cohorte is None:
+            raise AuthenticationError(
+                "La cohorte necesita código de carrera y número de cohorte "
+                "antes de aprobar legajos",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        if cohort.ultimo_numero_legajo >= 999:
+            raise AuthenticationError(
+                "La cohorte agotó los 999 números de legajo disponibles",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        next_number = cohort.ultimo_numero_legajo + 1
+        legajo_number = (
+            f"{cohort.anio % 100:02d}-{cohort.codigo_carrera}-"
+            f"{cohort.numero_cohorte:02d}-{next_number:03d}"
+        )
+        duplicate_number = await db.scalar(
+            select(Legajo.id).where(Legajo.numero_legajo == legajo_number)
+        )
+        if duplicate_number is not None:
+            raise AuthenticationError(
+                "El siguiente número de legajo ya existe; se requiere revisar "
+                "el contador de la cohorte",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        student = await db.scalar(
+            select(User)
+            .where(User.id == legajo.usuario_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if student is None:
+            raise _not_found("No se encontró el usuario asociado al legajo")
+
+        cohort.ultimo_numero_legajo = next_number
+        legajo.numero_legajo = legajo_number
+        legajo.fecha_aprobacion = datetime.now(UTC)
+        student.rol = "ALUMNO"
 
     comment = payload.motivo_observacion
     if target_state in {LegajoEstado.OBSERVADO.value, LegajoEstado.RECHAZADO.value}:

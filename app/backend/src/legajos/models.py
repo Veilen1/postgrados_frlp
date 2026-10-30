@@ -13,9 +13,10 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
+from src.cohortes.models import Cohorte
 from src.shared.database import Base
 
 
@@ -90,6 +91,7 @@ class Legajo(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    cohorte: Mapped[Cohorte] = relationship(lazy="raise")
 
 
 class Documento(Base):

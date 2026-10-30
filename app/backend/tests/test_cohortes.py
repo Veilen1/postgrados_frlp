@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.auth.security import create_access_token, hash_password
 from src.cohortes.models import Cohorte
+from src.legajos.models import Legajo
 from src.shared.models import User
 
 ADMIN_EMAIL = "admin@example.com"
@@ -46,7 +47,7 @@ async def create_cohort(
         id=uuid4(),
         anio=2026,
         nombre=name,
-        carrera="Especialización en Sistemas",
+        carrera="Maestría en Ingeniería en Sistemas de Información",
         tipo_carrera="Especializacion",
         abierta=is_open,
         fecha_inicio=date(2026, 3, 1),
@@ -65,8 +66,10 @@ def auth_header(user: User) -> dict[str, str]:
 def valid_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "anio": 2026,
-        "nombre": "Maestría en Datos 2026",
-        "carrera": "Maestría en Ciencia de Datos",
+        "nombre": "Maestría en Ingeniería en Sistemas de Información 2026",
+        "carrera": "Maestría en Ingeniería en Sistemas de Información",
+        "codigo_carrera": "MISI",
+        "numero_cohorte": 1,
         "tipo_carrera": "Maestria",
         "abierta": True,
         "fecha_inicio": "2026-08-01",
@@ -159,14 +162,18 @@ async def test_admin_can_create_cohort(
 
     assert response.status_code == 201
     body = response.json()
-    assert body["nombre"] == "Maestría en Datos 2026"
+    assert body["nombre"] == "Maestría en Ingeniería en Sistemas de Información 2026"
+    assert body["codigo_carrera"] == "MISI"
+    assert body["numero_cohorte"] == 1
     assert body["tipo_carrera"] == "Maestria"
     assert body["abierta"] is True
     assert body["fecha_inicio"] == "2026-08-01"
 
     async with test_session_factory() as session:
         created = await session.scalar(
-            select(Cohorte).where(Cohorte.nombre == "Maestría en Datos 2026")
+            select(Cohorte).where(
+                Cohorte.nombre == "Maestría en Ingeniería en Sistemas de Información 2026"
+            )
         )
         assert created is not None
         assert created.id is not None
@@ -194,7 +201,11 @@ async def test_cohort_creation_rejects_duplicate_name(
     test_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     admin = await create_user(test_session_factory, email=ADMIN_EMAIL, role="ADMIN_POSGRADO")
-    await create_cohort(test_session_factory, name="Maestría en Datos 2026", is_open=False)
+    await create_cohort(
+        test_session_factory,
+        name="Maestría en Ingeniería en Sistemas de Información 2026",
+        is_open=False,
+    )
 
     response = await client.post(
         "/api/v1/cohortes",
@@ -219,6 +230,144 @@ async def test_cohort_creation_validates_fields(
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_cohort_creation_rejects_duplicate_identifier_and_invalid_code(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    admin = await create_user(test_session_factory, email=ADMIN_EMAIL, role="ADMIN_POSGRADO")
+    first = await client.post(
+        "/api/v1/cohortes",
+        json=valid_payload(),
+        headers=auth_header(admin),
+    )
+    duplicate_identifier = await client.post(
+        "/api/v1/cohortes",
+        json=valid_payload(nombre="Otra maestría"),
+        headers=auth_header(admin),
+    )
+    invalid_code = await client.post(
+        "/api/v1/cohortes",
+        json=valid_payload(nombre="Código inválido", codigo_carrera="misi"),
+        headers=auth_header(admin),
+    )
+    conflicting_career_code = await client.post(
+        "/api/v1/cohortes",
+        json=valid_payload(
+            nombre="Código alternativo",
+            codigo_carrera="MSII",
+            numero_cohorte=2,
+        ),
+        headers=auth_header(admin),
+    )
+    reused_code = await client.post(
+        "/api/v1/cohortes",
+        json=valid_payload(
+            nombre="Otra carrera",
+            carrera="Maestría en Ingeniería Industrial",
+            numero_cohorte=2,
+        ),
+        headers=auth_header(admin),
+    )
+
+    assert first.status_code == 201
+    assert duplicate_identifier.status_code == 409
+    assert invalid_code.status_code == 422
+    assert conflicting_career_code.status_code == 400
+    assert reused_code.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_admin_cannot_change_identifier_after_issuing_descriptive_numbers(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    admin = await create_user(test_session_factory, email=ADMIN_EMAIL, role="SUPERADMIN")
+    owner = await create_user(test_session_factory, email=ASPIRANT_EMAIL, role="ASPIRANTE")
+    cohort = await create_cohort(test_session_factory, name="Cohorte heredada", is_open=False)
+
+    assigned = await client.patch(
+        f"/api/v1/cohortes/{cohort.id}/identificador",
+        json={"codigo_carrera": "MISI", "numero_cohorte": 1},
+        headers=auth_header(admin),
+    )
+    assert assigned.status_code == 200
+    assert assigned.json()["codigo_carrera"] == "MISI"
+    assert assigned.json()["numero_cohorte"] == 1
+
+    async with test_session_factory() as session:
+        saved = await session.get(Cohorte, cohort.id)
+        assert saved is not None
+        session.add(
+            Legajo(
+                id=uuid4(),
+                numero_legajo="26-MISI-01-001",
+                usuario_id=owner.id,
+                cohorte_id=cohort.id,
+                dni="30123456",
+                apellido=owner.apellido,
+                nombre=owner.nombre,
+                email=owner.email,
+                estado="APROBADO",
+            )
+        )
+        saved.ultimo_numero_legajo = 1
+        await session.commit()
+
+    locked = await client.patch(
+        f"/api/v1/cohortes/{cohort.id}/identificador",
+        json={"codigo_carrera": "MISI", "numero_cohorte": 2},
+        headers=auth_header(admin),
+    )
+    assert locked.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_admin_can_assign_identifier_to_legacy_cohort_with_historical_numbers(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    admin = await create_user(test_session_factory, email=ADMIN_EMAIL, role="SUPERADMIN")
+    owner = await create_user(test_session_factory, email=ASPIRANT_EMAIL, role="ASPIRANTE")
+    cohort = await create_cohort(
+        test_session_factory,
+        name="Cohorte histórica",
+        is_open=False,
+    )
+    async with test_session_factory() as session:
+        saved = await session.get(Cohorte, cohort.id)
+        assert saved is not None
+        saved.ultimo_numero_legajo = 45
+        session.add(
+            Legajo(
+                id=uuid4(),
+                numero_legajo="26-001-045",
+                usuario_id=owner.id,
+                cohorte_id=cohort.id,
+                dni="30123456",
+                apellido=owner.apellido,
+                nombre=owner.nombre,
+                email=owner.email,
+                estado="APROBADO",
+            )
+        )
+        await session.commit()
+
+    assigned = await client.patch(
+        f"/api/v1/cohortes/{cohort.id}/identificador",
+        json={"codigo_carrera": "MISI", "numero_cohorte": 1},
+        headers=auth_header(admin),
+    )
+
+    assert assigned.status_code == 200
+    assert assigned.json()["codigo_carrera"] == "MISI"
+    assert assigned.json()["numero_cohorte"] == 1
+    async with test_session_factory() as session:
+        updated = await session.get(Cohorte, cohort.id)
+        assert updated is not None
+        assert updated.ultimo_numero_legajo == 45
 
 
 @pytest.mark.asyncio

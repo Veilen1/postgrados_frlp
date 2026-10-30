@@ -39,12 +39,19 @@ async def create_cohort(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     open_for_registration: bool = True,
+    name: str | None = None,
+    codigo_carrera: str | None = None,
+    numero_cohorte: int | None = None,
+    ultimo_numero_legajo: int = 0,
 ) -> Cohorte:
     cohort = Cohorte(
         id=uuid4(),
         anio=2026,
-        nombre=f"Cohorte {uuid4()}",
-        carrera="Especialización en Sistemas",
+        nombre=name or f"Cohorte {uuid4()}",
+        carrera="Maestría en Ingeniería en Sistemas de Información",
+        codigo_carrera=codigo_carrera,
+        numero_cohorte=numero_cohorte,
+        ultimo_numero_legajo=ultimo_numero_legajo,
         tipo_carrera="Especializacion",
         abierta=open_for_registration,
         fecha_inicio=date(2026, 3, 1),
@@ -124,6 +131,8 @@ async def test_create_legajo_uses_authenticated_profile_and_open_cohort(
 
     assert response.status_code == 201
     assert response.json()["usuario_id"] == str(user.id)
+    assert response.json()["cohorte"]["nombre"] == cohort.nombre
+    assert response.json()["cohorte"]["carrera"] == cohort.carrera
     assert response.json()["nombre"] == user.nombre
     assert response.json()["apellido"] == user.apellido
     assert response.json()["email"] == user.email
@@ -398,7 +407,7 @@ async def test_admin_transitions_require_valid_state_and_reason(
 
 
 @pytest.mark.asyncio
-async def test_approval_is_rejected_until_numbering_policy_is_defined(
+async def test_approval_generates_descriptive_number_and_promotes_user(
     client: AsyncClient,
     test_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -408,14 +417,128 @@ async def test_approval_is_rejected_until_numbering_policy_is_defined(
         email="admin@example.com",
         role="ADMIN_POSGRADO",
     )
-    cohort = await create_cohort(test_session_factory)
+    cohort = await create_cohort(
+        test_session_factory,
+        name="Maestría MISI 2026",
+        codigo_carrera="MISI",
+        numero_cohorte=1,
+        ultimo_numero_legajo=44,
+    )
     legajo = await post_legajo(client, user, cohort)
+    legajo_id = UUID(legajo["id"])
+    await upload_required_documents(
+        test_session_factory,
+        legajo_id,
+        "DNI",
+        "TITULO_GRADO",
+    )
 
-    response = await client.patch(
-        f"/api/v1/legajos/{legajo['id']}/estado",
+    sent = await client.post(
+        f"/api/v1/legajos/{legajo_id}/enviar",
+        headers=auth_header(user),
+    )
+    assert sent.status_code == 200
+    reviewed = await client.patch(
+        f"/api/v1/legajos/{legajo_id}/estado",
+        json={"estado": "EN_REVISION"},
+        headers=auth_header(admin),
+    )
+    assert reviewed.status_code == 200
+
+    approved = await client.patch(
+        f"/api/v1/legajos/{legajo_id}/estado",
         json={"estado": "APROBADO"},
         headers=auth_header(admin),
     )
 
-    assert response.status_code == 400
-    assert "número de legajo" in response.json()["message"]
+    assert approved.status_code == 200
+    assert approved.json()["estado"] == "APROBADO"
+    assert approved.json()["numero_legajo"] == "26-MISI-01-045"
+    assert approved.json()["fecha_aprobacion"] is not None
+
+    repeated = await client.patch(
+        f"/api/v1/legajos/{legajo_id}/estado",
+        json={"estado": "APROBADO"},
+        headers=auth_header(admin),
+    )
+    assert repeated.status_code == 400
+
+    async with test_session_factory() as session:
+        updated_user = await session.get(User, user.id)
+        updated_cohort = await session.get(Cohorte, cohort.id)
+        assert updated_user is not None
+        assert updated_user.rol == "ALUMNO"
+        assert updated_cohort is not None
+        assert updated_cohort.ultimo_numero_legajo == 45
+
+
+@pytest.mark.asyncio
+async def test_approval_requires_cohort_identifier_and_respects_sequence_limit(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    admin = await create_user(
+        test_session_factory,
+        email="admin@example.com",
+        role="ADMIN_POSGRADO",
+    )
+    owner = await create_user(test_session_factory, email="owner@example.com")
+    cohort_without_code = await create_cohort(test_session_factory)
+    legajo_without_code = await post_legajo(client, owner, cohort_without_code)
+    legajo_without_code_id = UUID(legajo_without_code["id"])
+    await upload_required_documents(
+        test_session_factory,
+        legajo_without_code_id,
+        "DNI",
+        "TITULO_GRADO",
+    )
+    await client.post(
+        f"/api/v1/legajos/{legajo_without_code_id}/enviar",
+        headers=auth_header(owner),
+    )
+    await client.patch(
+        f"/api/v1/legajos/{legajo_without_code_id}/estado",
+        json={"estado": "EN_REVISION"},
+        headers=auth_header(admin),
+    )
+
+    missing_code = await client.patch(
+        f"/api/v1/legajos/{legajo_without_code_id}/estado",
+        json={"estado": "APROBADO"},
+        headers=auth_header(admin),
+    )
+    assert missing_code.status_code == 400
+    assert "código de carrera" in missing_code.json()["message"]
+
+    full_cohort = await create_cohort(
+        test_session_factory,
+        name="Cohorte completa",
+        codigo_carrera="MISI",
+        numero_cohorte=2,
+        ultimo_numero_legajo=999,
+    )
+    second_owner = await create_user(test_session_factory, email="owner2@example.com")
+    full_legajo = await post_legajo(client, second_owner, full_cohort)
+    full_legajo_id = UUID(full_legajo["id"])
+    await upload_required_documents(
+        test_session_factory,
+        full_legajo_id,
+        "DNI",
+        "TITULO_GRADO",
+    )
+    await client.post(
+        f"/api/v1/legajos/{full_legajo_id}/enviar",
+        headers=auth_header(second_owner),
+    )
+    await client.patch(
+        f"/api/v1/legajos/{full_legajo_id}/estado",
+        json={"estado": "EN_REVISION"},
+        headers=auth_header(admin),
+    )
+    full_sequence = await client.patch(
+        f"/api/v1/legajos/{full_legajo_id}/estado",
+        json={"estado": "APROBADO"},
+        headers=auth_header(admin),
+    )
+    assert full_sequence.status_code == 400
+    assert "999" in full_sequence.json()["message"]

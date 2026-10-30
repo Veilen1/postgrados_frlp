@@ -4,8 +4,18 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cohortes.schemas import CohorteCreate, CohorteEstadoUpdate, CohorteResponse
-from src.cohortes.service import create_cohorte, list_cohortes, update_cohorte_state
+from src.cohortes.schemas import (
+    CohorteCreate,
+    CohorteEstadoUpdate,
+    CohorteIdentificadorUpdate,
+    CohorteResponse,
+)
+from src.cohortes.service import (
+    create_cohorte,
+    list_cohortes,
+    update_cohorte_identificador,
+    update_cohorte_state,
+)
 from src.shared.auth.dependencies import get_optional_current_user, require_roles
 from src.shared.database import get_db
 from src.shared.models import User
@@ -44,4 +54,15 @@ async def patch_cohorte_state(
     _: Annotated[User, Depends(require_roles("ADMIN_POSGRADO", "SUPERADMIN"))],
 ) -> CohorteResponse:
     cohort = await update_cohorte_state(db, cohort_id, abierta=payload.abierta)
+    return CohorteResponse.model_validate(cohort)
+
+
+@router.patch("/{cohort_id}/identificador", response_model=CohorteResponse)
+async def patch_cohorte_identifier(
+    cohort_id: UUID,
+    payload: CohorteIdentificadorUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_roles("ADMIN_POSGRADO", "SUPERADMIN"))],
+) -> CohorteResponse:
+    cohort = await update_cohorte_identificador(db, cohort_id, payload)
     return CohorteResponse.model_validate(cohort)

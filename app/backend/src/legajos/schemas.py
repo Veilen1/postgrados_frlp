@@ -66,6 +66,16 @@ class LegajoEstadoUpdate(BaseModel):
     motivo_observacion: str | None = Field(default=None, max_length=2000)
 
 
+class CohorteLegajoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    anio: int
+    nombre: str
+    carrera: str
+    codigo_carrera: str | None
+    numero_cohorte: int | None
+
+
 class LegajoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,6 +83,7 @@ class LegajoResponse(BaseModel):
     numero_legajo: str | None
     usuario_id: UUID
     cohorte_id: UUID
+    cohorte: CohorteLegajoResponse
     dni: str
     apellido: str
     nombre: str

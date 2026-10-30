@@ -17,6 +17,8 @@ class CohorteCreate(BaseModel):
     anio: int = Field(ge=1)
     nombre: str = Field(min_length=1, max_length=100)
     carrera: str = Field(min_length=1, max_length=100)
+    codigo_carrera: str = Field(pattern=r"^[A-Z0-9]{4}$")
+    numero_cohorte: int = Field(ge=1, le=99)
     tipo_carrera: TipoCarrera
     abierta: bool = False
     fecha_inicio: date | None = None
@@ -26,6 +28,13 @@ class CohorteCreate(BaseModel):
         if not self.nombre or not self.carrera:
             raise ValueError("nombre y carrera no pueden quedar vacíos")
         return self
+
+
+class CohorteIdentificadorUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    codigo_carrera: str = Field(pattern=r"^[A-Z0-9]{4}$")
+    numero_cohorte: int = Field(ge=1, le=99)
 
 
 class CohorteEstadoUpdate(BaseModel):
@@ -39,6 +48,8 @@ class CohorteResponse(BaseModel):
     anio: int
     nombre: str
     carrera: str
+    codigo_carrera: str | None
+    numero_cohorte: int | None
     tipo_carrera: TipoCarrera
     abierta: bool
     fecha_inicio: date | None
