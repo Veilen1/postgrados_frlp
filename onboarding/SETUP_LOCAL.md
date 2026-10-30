@@ -244,6 +244,24 @@ docker compose down
 
 ---
 
+### Atajos de productividad con `make` (Opcional — Linux / Mac / WSL)
+
+Para no tener que escribir comandos largos de Docker en cada iteración, el proyecto incluye un archivo `Makefile` en la raíz del repositorio. Funciona como una lista de atajos directos:
+
+| Comando | Qué hace por detrás (Comando Docker nativo) | Para qué sirve |
+|---|---|---|
+| `make up` | `docker compose up -d` | Levanta todo el entorno en segundo plano. |
+| `make down` | `docker compose down` | Apaga los contenedores liberando puertos y RAM. |
+| `make status` | `docker compose ps` | Muestra qué servicios están corriendo y saludables (`healthy`). |
+| `make test` | `docker compose exec backend pytest -v` | Corre la suite de tests automáticos en el backend. |
+| `make logs` | `docker compose logs -f` | Monitorea los logs en tiempo real para ver errores o prints. |
+| `make db-shell` | `docker compose exec db psql -U postgrado_user -d postgrado_dev` | Entra directo a la consola SQL de la base de datos. |
+| `make clean` | `docker compose down -v` | Resetea la base de datos y volúmenes de cero si algo se rompe. |
+
+> **Nota para Windows (PowerShell / CMD sin WSL):** La herramienta `make` es nativa de entornos Unix (Linux, Mac o WSL en Windows). Si usás la consola nativa de Windows y no tenés `make`, podés ejecutar directamente los comandos de `docker compose` de la segunda columna sin ningún problema.
+
+---
+
 ### Tests y calidad de código — Stack FastAPI (principal)
 
 ```bash
