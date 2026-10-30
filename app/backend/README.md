@@ -14,6 +14,7 @@ Set-Location app/backend
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-dev.txt
+python -m alembic upgrade head
 python -m uvicorn src.main:app --reload
 ```
 
@@ -25,6 +26,18 @@ Para ejecutar todo el entorno integrado en Docker, desde la raíz del repositori
 ```powershell
 docker compose up -d --build
 ```
+
+El servicio backend ejecuta `alembic upgrade head` antes de iniciar FastAPI. Esto aplica
+las migraciones pendientes también sobre volúmenes PostgreSQL existentes. En ejecución
+local fuera de Docker, aplicalas manualmente antes de iniciar Uvicorn:
+
+```powershell
+python -m alembic upgrade head
+```
+
+`docker/database/init.sql` sigue creando el esquema base al crear un volumen nuevo;
+Alembic administra los cambios incrementales posteriores. No borres el volumen para
+aplicar una migración.
 
 El endpoint `/api/v1/health` comprueba la conexión a PostgreSQL y
 `/api/v1/health/live` verifica que el proceso de API esté activo.

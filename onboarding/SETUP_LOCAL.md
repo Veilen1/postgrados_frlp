@@ -106,7 +106,8 @@ postgrado-frontend Up              0.0.0.0:3000->3000/tcp
 En este entorno, PostgreSQL ejecuta `docker/database/init.sql` automáticamente cuando
 se crea el volumen por primera vez. El script crea el esquema Core y datos iniciales.
 Si el volumen ya existía antes de agregar o modificar el script, Docker no lo vuelve a
-ejecutar automáticamente.
+ejecutar automáticamente. Al iniciar, el backend ejecuta `alembic upgrade head` y aplica
+las migraciones versionadas pendientes sobre la base existente.
 
 ```bash
 docker compose exec db psql -U postgrado_user -d postgrado_dev
@@ -265,9 +266,16 @@ docker exec postgrado-backend npm run typecheck
 ### Esquema de base de datos
 
 El esquema inicial se crea desde `docker/database/init.sql` cuando se inicializa el
-volumen PostgreSQL. Las migraciones versionadas de Alembic todavía no están configuradas.
-Para agregar cambios posteriores, se debe implementar y acordar esa estrategia antes de
-editar el SQL inicial: Docker ejecuta ese archivo solo cuando el volumen está vacío.
+volumen PostgreSQL. Los cambios incrementales se gestionan con migraciones versionadas de
+Alembic, que el backend aplica automáticamente al iniciar en Docker. En ejecución local
+fuera de Docker, aplicalas desde `app/backend` antes de arrancar la API:
+
+```powershell
+python -m alembic upgrade head
+```
+
+No es necesario borrar el volumen para aplicar una migración. El SQL inicial sigue siendo
+el bootstrap de una base nueva; no se usa para modificar volúmenes ya inicializados.
 
 ---
 
