@@ -77,7 +77,7 @@ Lee en este orden antes de escribir código:
 
 ---
 
-## Quickstart — Levantá el entorno en 5 minutos
+## Quickstart — Levantá el entorno
 
 > **Requisitos previos:** Git · Docker Engine / Docker Desktop (Compose v2)
 
@@ -97,10 +97,11 @@ docker compose ps
 docker compose exec backend pytest -v
 ```
 
-✅ **Criterio de éxito:** 
+✅ **Criterio de éxito:**
 - Backend API & Swagger: `http://localhost:8000/api/docs`
 - Healthcheck activo: `http://localhost:8000/api/v1/health`
 - Frontend UI: `http://localhost:3000`
+- Para ejecutar el backend sin Docker, seguí [`app/backend/README.md`](app/backend/README.md).
 
 ---
 
@@ -150,9 +151,9 @@ postgrado-[equipo]/
 │       ├── ADR-000-template.md
 │       └── ADR-001-stack.md      ← Primera decisión: elección de stack
 │
-├── src/
-│   ├── core/                     ← Módulo Core (TODOS los equipos)
-│   └── mod-[b|c|d]/              ← Módulo especializado asignado
+├── app/
+│   ├── backend/                 ← API FastAPI del Módulo Core
+│   └── frontend/                ← Aplicación React
 │
 └── .github/
     └── workflows/

@@ -206,7 +206,7 @@ Sin integración: CVG, SIU-Guaraní, Etc (fuera de alcance del MVP)
 La carpeta raíz del backend **grita el dominio del negocio**, no el framework. Cada carpeta de primer nivel es un módulo de negocio. Dentro de cada módulo, las capas de Clean Architecture organizan el código.
 
 ```
-backend/
+app/backend/
 ├── main.py                      ← Crea la app FastAPI y registra los routers de cada módulo
 ├── requirements.txt
 ├── alembic.ini
@@ -325,8 +325,8 @@ backend/
 |---------|----------|
 | ¿Puedo testear `calcular_semaforo()` sin levantar Docker? | ✅ Sí. Está en `seguimiento_graduacion/domain/semaforo.py`, sin imports de SQLAlchemy ni FastAPI. |
 | ¿Puedo cambiar PostgreSQL por SQLite en los tests? | ✅ Sí. Solo cambia la implementación en `infrastructure/pg_repository.py`. El dominio no se entera. |
-| ¿Puedo agregar un módulo nuevo sin tocar los existentes? | ✅ Sí. Creás una nueva carpeta en `src/` con sus 4 subcarpetas y registrás el router en `main.py`. |
-| ¿Un nuevo desarrollador entiende de qué trata el sistema mirando `src/`? | ✅ Sí. Las carpetas gritan el negocio. |
+| ¿Puedo agregar un módulo nuevo sin tocar los existentes? | ✅ Sí. Creás una nueva carpeta en `app/backend/src/` con sus 4 subcarpetas y registrás el router en `main.py`. |
+| ¿Un nuevo desarrollador entiende de qué trata el sistema mirando `app/backend/src/`? | ✅ Sí. Las carpetas gritan el negocio. |
 
 ---
 
@@ -335,7 +335,7 @@ backend/
 NestJS tiene su propio sistema de módulos que se mapea naturalmente a Screaming Architecture. Cada módulo de NestJS es un módulo de negocio.
 
 ```
-backend/
+app/backend/
 ├── src/
 │   │
 │   ├── inscripcion/             ← 📣 GRITA "inscribimos aspirantes"
@@ -523,7 +523,7 @@ frontend/
 ### 7.3 Implementación de la autorización (FastAPI)
 
 ```python
-# src/shared/auth/dependencies.py
+# app/backend/src/shared/auth/dependencies.py
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -721,7 +721,7 @@ enum TipoCarrera { Especializacion Maestria Doctorado }
 ### 9.2 Validación de PDFs — Python
 
 ```python
-# src/gestion_documental/infrastructure/file_storage.py
+# app/backend/src/gestion_documental/infrastructure/file_storage.py
 import magic  # pip install python-magic
 
 MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -772,7 +772,7 @@ Esta función es el núcleo de negocio más complejo del Módulo C. Debe existir
 ### 10.1 Python
 
 ```python
-# src/seguimiento_graduacion/domain/semaforo.py
+# app/backend/src/seguimiento_graduacion/domain/semaforo.py
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum

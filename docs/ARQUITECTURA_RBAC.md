@@ -95,11 +95,11 @@ La autenticación se realiza mediante **JSON Web Tokens (JWT)** transmitidos en 
 
 La arquitectura respeta la separación de capas: el framework HTTP se limita a autenticar y verificar roles perimetrales; la lógica de negocio y permisos sobre recursos específicos reside en los casos de uso.
 
-### 4.1 Dependencias Reutilizables (`src/shared/auth/dependencies.py`)
+### 4.1 Dependencias Reutilizables (`app/backend/src/shared/auth/dependencies.py`)
 
 ```python
 """
-src/shared/auth/dependencies.py
+app/backend/src/shared/auth/dependencies.py
 Dependencias de seguridad perimetral de FastAPI.
 """
 from typing import Annotated, Sequence
@@ -228,7 +228,7 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 
 ## 6. Máquina de Estados del Legajo y Permisos de Transición
 
-Las transiciones de estado son atómicas y están gobernadas por reglas de negocio puras en el dominio (`src/inscripcion/domain/estados.py`):
+Las transiciones de estado son atómicas y están gobernadas por reglas de negocio puras en el dominio (`app/backend/src/inscripcion/domain/estados.py`):
 
 ```
                         ┌─────────────┐
@@ -303,4 +303,3 @@ Para evitar fuga de información y facilitar la integración con el cliente Reac
   "timestamp": "2026-10-28T12:00:00Z"
 }
 ```
-
