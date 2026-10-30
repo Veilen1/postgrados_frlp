@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+source = ["src.shared.api"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
