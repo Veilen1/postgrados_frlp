@@ -126,34 +126,75 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, o
   </>
 );
 
-const Paso4Resumen = ({ formData, onPrev, onConfirm }) => (
-  <>
-    <div className="resumen-box">
-      <h3>1. Datos Personales</h3>
-      <div className="resumen-grid">
-        <div className="resumen-item"><span>Nombre Completo</span><p>{formData.nombre || '-'} {formData.apellido || '-'}</p></div>
-        <div className="resumen-item"><span>DNI / Pasaporte</span><p>{formData.dni || '-'}</p></div>
-        <div className="resumen-item"><span>Email</span><p>{formData.email || '-'}</p></div>
+const Paso4Resumen = ({ formData, archivos, onPrev, onConfirm }) => {
+  const formatSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <>
+      <div className="resumen-box">
+        <h3>1. Datos Personales</h3>
+        <div className="resumen-grid">
+          <div className="resumen-item"><span>Nombre Completo</span><p>{formData.nombre || '-'} {formData.apellido || '-'}</p></div>
+          <div className="resumen-item"><span>DNI / Pasaporte</span><p>{formData.dni || '-'}</p></div>
+          <div className="resumen-item"><span>Email</span><p>{formData.email || '-'}</p></div>
+        </div>
       </div>
-    </div>
-    <div className="resumen-box">
-      <h3>2. Perfil Académico & Postulación</h3>
-      <div className="resumen-grid">
-        <div className="resumen-item"><span>Carrera Seleccionada</span><p><strong>{formData.posgrado}</strong></p></div>
-        <div className="resumen-item"><span>Título de Grado</span><p>{formData.titulo || '-'}</p></div>
-        <div className="resumen-item"><span>Universidad</span><p>{formData.universidad || '-'} {formData.anioEgreso ? `(${formData.anioEgreso})` : ''}</p></div>
+      <div className="resumen-box">
+        <h3>2. Perfil Académico & Postulación</h3>
+        <div className="resumen-grid">
+          <div className="resumen-item"><span>Carrera Seleccionada</span><p><strong>{formData.posgrado}</strong></p></div>
+          <div className="resumen-item"><span>Título de Grado</span><p>{formData.titulo || '-'}</p></div>
+          <div className="resumen-item"><span>Universidad</span><p>{formData.universidad || '-'} {formData.anioEgreso ? `(${formData.anioEgreso})` : ''}</p></div>
+        </div>
       </div>
-    </div>
-    <div className="resumen-box">
-      <h3>3. Documentación Digital</h3>
-      <p style={{color: '#28a745', margin: 0}}><strong>✔️ Archivos PDF adjuntos correctamente</strong></p>
-    </div>
-    <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
-      <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Modificar Datos</button>
-      <button className="btn-primary" style={{flex: 2}} onClick={onConfirm}>Confirmar y Enviar</button>
-    </div>
-  </>
-);
+      <div className="resumen-box">
+        <h3>3. Documentación Digital</h3>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+          <li>
+            <strong>Título de Grado:</strong>{' '}
+            {archivos?.titulo ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.titulo.name} ({formatSize(archivos.titulo.size)})</span>
+            ) : (
+              <span style={{ color: '#dc3545' }}>No adjuntado</span>
+            )}
+          </li>
+          <li>
+            <strong>Copia de DNI:</strong>{' '}
+            {archivos?.dni ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.dni.name} ({formatSize(archivos.dni.size)})</span>
+            ) : (
+              <span style={{ color: '#dc3545' }}>No adjuntado</span>
+            )}
+          </li>
+          <li>
+            <strong>Certificado Analítico:</strong>{' '}
+            {archivos?.analitico ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.analitico.name} ({formatSize(archivos.analitico.size)})</span>
+            ) : (
+              <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
+            )}
+          </li>
+          <li>
+            <strong>Curriculum Vitae:</strong>{' '}
+            {archivos?.cv ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.cv.name} ({formatSize(archivos.cv.size)})</span>
+            ) : (
+              <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
+            )}
+          </li>
+        </ul>
+      </div>
+      <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
+        <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Modificar Datos</button>
+        <button className="btn-primary" style={{flex: 2}} onClick={onConfirm}>Confirmar y Enviar</button>
+      </div>
+    </>
+  );
+};
 
 export default function Preinscripcion() {
   const [paso, setPaso] = useState(1);
@@ -309,6 +350,7 @@ export default function Preinscripcion() {
         {paso === 4 && (
           <Paso4Resumen
             formData={formData}
+            archivos={archivos}
             onPrev={() => setPaso(3)}
             onConfirm={handleConfirm}
           />
