@@ -72,47 +72,51 @@ const Paso2DatosAcademicos = ({ formData, handleChange, errores, onPrev, onNext 
   </>
 );
 
-const Paso3Documentacion = ({ archivos, onFileChange, onPrev, onNext }) => (
+const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, onNext }) => (
   <>
     <div style={{background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
-       <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF.
+       <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF y pesar menos de 5MB.
     </div>
     <div className="form-grid">
       <div className="form-group">
-        <label>Copia de Título Universitario (.pdf)</label>
+        <label>Copia de Título Universitario (.pdf) <span style={{color: 'red'}}>*</span></label>
         <input 
           type="file" 
-          accept=".pdf" 
-          className="form-control" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.titulo ? 'error' : ''}`}
           onChange={(e) => onFileChange('titulo', e)} 
         />
+        {erroresArchivos?.titulo && <span className="error-text">{erroresArchivos.titulo}</span>}
       </div>
       <div className="form-group">
         <label>Certificado Analítico (.pdf)</label>
         <input 
           type="file" 
-          accept=".pdf" 
-          className="form-control" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.analitico ? 'error' : ''}`}
           onChange={(e) => onFileChange('analitico', e)} 
         />
+        {erroresArchivos?.analitico && <span className="error-text">{erroresArchivos.analitico}</span>}
       </div>
       <div className="form-group">
         <label>Curriculum Vitae (CV) (.pdf)</label>
         <input 
           type="file" 
-          accept=".pdf" 
-          className="form-control" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.cv ? 'error' : ''}`}
           onChange={(e) => onFileChange('cv', e)} 
         />
+        {erroresArchivos?.cv && <span className="error-text">{erroresArchivos.cv}</span>}
       </div>
       <div className="form-group">
-        <label>Copia de DNI (.pdf)</label>
+        <label>Copia de DNI (.pdf) <span style={{color: 'red'}}>*</span></label>
         <input 
           type="file" 
-          accept=".pdf" 
-          className="form-control" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.dni ? 'error' : ''}`}
           onChange={(e) => onFileChange('dni', e)} 
         />
+        {erroresArchivos?.dni && <span className="error-text">{erroresArchivos.dni}</span>}
       </div>
     </div>
     <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
@@ -154,6 +158,7 @@ const Paso4Resumen = ({ formData, onPrev, onConfirm }) => (
 export default function Preinscripcion() {
   const [paso, setPaso] = useState(1);
   const [errores, setErrores] = useState({});
+  const [erroresArchivos, setErroresArchivos] = useState({});
   const [formData, setFormData] = useState({
     nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
     titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
@@ -168,6 +173,30 @@ export default function Preinscripcion() {
 
   const handleFileChange = (tipo, e) => {
     const file = e.target.files[0] || null;
+
+    if (!file) {
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Validación 1: Debe ser formato PDF
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: 'Solo se aceptan archivos en formato PDF' }));
+      e.target.value = '';
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Validación 2: Límite de 5MB (5 * 1024 * 1024 bytes)
+    if (file.size > 5 * 1024 * 1024) {
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: 'El archivo es demasiado grande. Máximo permitido: 5MB' }));
+      e.target.value = '';
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Si es válido, limpiamos el error y guardamos el archivo
+    setErroresArchivos((prev) => ({ ...prev, [tipo]: '' }));
     setArchivos((prev) => ({ ...prev, [tipo]: file }));
   };
 
@@ -207,12 +236,31 @@ export default function Preinscripcion() {
     }
   };
 
+  const validatePaso3 = () => {
+    const nuevosErrores = {};
+    if (!archivos.titulo) nuevosErrores.titulo = 'La copia del título universitario es obligatoria';
+    if (!archivos.dni) nuevosErrores.dni = 'La copia de DNI es obligatoria';
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErroresArchivos(nuevosErrores);
+    } else {
+      setErroresArchivos({});
+      setPaso(4);
+    }
+  };
+
   const handleConfirm = () => {
     alert('¡Preinscripción enviada con éxito!');
     setPaso(1);
     setFormData({
       nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
       titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
+    });
+    setArchivos({
+      titulo: null,
+      analitico: null,
+      cv: null,
+      dni: null,
     });
   };
 
@@ -251,9 +299,10 @@ export default function Preinscripcion() {
         {paso === 3 && (
           <Paso3Documentacion
             archivos={archivos}
+            erroresArchivos={erroresArchivos}
             onFileChange={handleFileChange}
             onPrev={() => setPaso(2)}
-            onNext={() => setPaso(4)}
+            onNext={validatePaso3}
           />
         )}
         
