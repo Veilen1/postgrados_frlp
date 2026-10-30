@@ -215,6 +215,14 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 | `/api/v1/legajos/{id}/enviar` | `POST` | `ASPIRANTE` | Solo titular. Transiciona de `BORRADOR` u `OBSERVADO` a `ENVIADO`. | `200`, `400`, `403`, `404` | Envío formal de la postulación para auditoría administrativa. |
 | `/api/v1/legajos/{id}/estado` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | Exclusivo administradores. | `200`, `400`, `401`, `403`, `404` | Transición de estado (`EN_REVISION`, `OBSERVADO`, `APROBADO`, `RECHAZADO`). |
 
+**Estado de implementación del Core:** cada usuario puede tener un único legajo. La creación
+usa el perfil autenticado y una cohorte abierta; los datos no presentes en la tabla actual
+(nacionalidad, domicilio y antecedentes académicos del formulario visual) quedan fuera de
+este contrato hasta acordar una migración. El envío exige documentos `DNI` y `TITULO_GRADO`,
+pero la API de carga documental todavía no está implementada. La transición a `APROBADO`
+queda pendiente de definir cómo se genera el segmento de cohorte del `numero_legajo`
+(`YY-NNN-CCC`); hasta entonces la API la rechaza explícitamente.
+
 ### 5.4 Gestión Documental (`/api/v1/legajos/{id}/documentos` y `/api/v1/documentos`)
 
 | Endpoint | Método | Roles Permitidos | Regla de Titularidad | Códigos HTTP | Propósito |

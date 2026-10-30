@@ -5,6 +5,7 @@ from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import src.cohortes.models  # noqa: F401
+import src.legajos.models  # noqa: F401
 import src.shared.models  # noqa: F401
 from alembic import context
 from src.shared.config import get_settings

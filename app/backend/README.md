@@ -47,7 +47,7 @@ El endpoint `/api/v1/health` comprueba la conexión a PostgreSQL y
 Desde `app/backend`:
 
 ```powershell
-python -m pytest --cov=src.auth --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing
+python -m pytest --cov=src.auth --cov=src.legajos --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing
 ```
 
 ## Endpoints implementados
@@ -61,9 +61,41 @@ python -m pytest --cov=src.auth --cov=src.shared.auth --cov=src.shared.api --cov
 | `GET` | `/api/v1/cohortes` | Lista cohortes abiertas públicamente y todas las cohortes para usuarios autenticados |
 | `POST` | `/api/v1/cohortes` | Crea una cohorte; requiere rol `ADMIN_POSGRADO` o `SUPERADMIN` |
 | `PATCH` | `/api/v1/cohortes/{cohort_id}/estado` | Abre/cierra inscripciones; requiere rol `ADMIN_POSGRADO` o `SUPERADMIN` |
+| `POST` | `/api/v1/legajos` | Crea el borrador de preinscripción del aspirante en una cohorte abierta |
+| `GET` | `/api/v1/legajos/mi-legajo` | Consulta el legajo propio de un aspirante o alumno |
+| `GET` | `/api/v1/legajos/{legajo_id}` | Consulta el legajo propio o, para administración, cualquier legajo |
+| `GET` | `/api/v1/legajos` | Lista legajos paginados y filtrables; requiere rol administrativo |
+| `PUT` | `/api/v1/legajos/{legajo_id}` | Edita datos del titular en estado `BORRADOR` u `OBSERVADO` |
+| `POST` | `/api/v1/legajos/{legajo_id}/enviar` | Envía una preinscripción con documentos `DNI` y `TITULO_GRADO` cargados |
+| `PATCH` | `/api/v1/legajos/{legajo_id}/estado` | Revisa, observa o rechaza; requiere rol administrativo |
 | `GET` | `/api/v1/health` | Healthcheck de la API y PostgreSQL |
 | `GET` | `/api/v1/health/ready` | Readiness de la API y PostgreSQL |
 | `GET` | `/api/v1/health/live` | Liveness de la API |
+
+### Contratos de legajos y preinscripción
+
+Todos estos endpoints requieren un access token, salvo que se indique el rol administrativo.
+El aspirante crea un borrador indicando una cohorte abierta y su DNI:
+
+```json
+{
+  "cohorte_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+  "dni": "30123456",
+  "solicita_beca": false,
+  "tipo_beca": null
+}
+```
+
+El backend toma `usuario_id`, nombre, apellido y email del perfil autenticado; no acepta
+que el cliente suplante esos datos de identidad. Cada usuario puede crear un solo legajo.
+`PUT /api/v1/legajos/{legajo_id}` recibe uno o más campos editables del legajo y solo
+funciona para su titular mientras está en estado `BORRADOR` u `OBSERVADO`.
+
+La consulta administrativa admite `page` (1 en adelante), `page_size` (máximo 100),
+`cohorte_id` y `estado`. Para revisar un legajo, administración puede transicionar
+`ENVIADO` a `EN_REVISION`, y luego a `OBSERVADO` o `RECHAZADO` (estos últimos requieren
+`motivo_observacion`). `APROBADO` todavía no está habilitado porque falta acordar la regla
+de generación de `numero_legajo`.
 
 ### Contratos de cohortes
 
@@ -92,5 +124,15 @@ La variable `JWT_SECRET` debe tener al menos 32 bytes. El secreto de desarrollo 
 en Compose/`.env.example` no debe usarse fuera de desarrollo; en otros entornos la API
 rechaza el valor de desarrollo por defecto.
 
-Todavía no están implementados legajos ni documentos. Sus reglas y endpoints se encuentran
-en [`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).
+Cada aspirante puede tener un solo legajo. La creación copia nombre, apellido y email del
+perfil autenticado; el cliente solo indica cohorte, DNI y datos de beca, y no puede asignar
+el `usuario_id`. La lista administrativa acepta `page` (1 en adelante), `page_size` (1-100),
+`cohorte_id` y `estado`. Los estados se registran en `auditoria_legajos`.
+
+El envío valida la presencia de los documentos `DNI` y `TITULO_GRADO` en la tabla existente.
+La carga/descarga de documentos aún no está implementada, por lo que un legajo sin ambos
+archivos no se puede enviar desde la API. La aprobación también queda pendiente hasta definir
+la generación del número de legajo `YY-NNN-CCC`; el endpoint devuelve un error explícito
+mientras no exista esa regla. Los campos del formulario visual que no existen en el esquema
+actual quedan fuera de esta API. Los contratos RBAC completos están en
+[`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).

@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS legajos (
                        CONSTRAINT semaforo_valido CHECK (semaforo IN ('VERDE', 'AMARILLO', 'ROJO')),
     created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_legajo_usuario UNIQUE (usuario_id),
     CONSTRAINT uq_legajo_cohorte_dni UNIQUE (cohorte_id, dni)
 );
 
@@ -160,4 +161,3 @@ VALUES (
     'ASPIRANTE',
     true
 ) ON CONFLICT (email) DO NOTHING;
-
