@@ -72,16 +72,48 @@ const Paso2DatosAcademicos = ({ formData, handleChange, errores, onPrev, onNext 
   </>
 );
 
-const Paso3Documentacion = ({ onPrev, onNext }) => (
+const Paso3Documentacion = ({ archivos, onFileChange, onPrev, onNext }) => (
   <>
     <div style={{background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
        <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF.
     </div>
     <div className="form-grid">
-      <div className="form-group"><label>Copia de Título Universitario (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Certificado Analítico (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Curriculum Vitae (CV) (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Copia de DNI (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
+      <div className="form-group">
+        <label>Copia de Título Universitario (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf" 
+          className="form-control" 
+          onChange={(e) => onFileChange('titulo', e)} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Certificado Analítico (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf" 
+          className="form-control" 
+          onChange={(e) => onFileChange('analitico', e)} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Curriculum Vitae (CV) (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf" 
+          className="form-control" 
+          onChange={(e) => onFileChange('cv', e)} 
+        />
+      </div>
+      <div className="form-group">
+        <label>Copia de DNI (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf" 
+          className="form-control" 
+          onChange={(e) => onFileChange('dni', e)} 
+        />
+      </div>
     </div>
     <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
       <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Volver</button>
@@ -126,6 +158,18 @@ export default function Preinscripcion() {
     nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
     titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
   });
+  // Estado para guardar los archivos PDF seleccionados
+  const [archivos, setArchivos] = useState({
+    titulo: null,
+    analitico: null,
+    cv: null,
+    dni: null,
+  });
+
+  const handleFileChange = (tipo, e) => {
+    const file = e.target.files[0] || null;
+    setArchivos((prev) => ({ ...prev, [tipo]: file }));
+  };
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});
@@ -206,6 +250,8 @@ export default function Preinscripcion() {
         
         {paso === 3 && (
           <Paso3Documentacion
+            archivos={archivos}
+            onFileChange={handleFileChange}
             onPrev={() => setPaso(2)}
             onNext={() => setPaso(4)}
           />
