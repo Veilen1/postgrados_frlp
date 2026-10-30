@@ -95,11 +95,11 @@ La autenticación se realiza mediante **JSON Web Tokens (JWT)** transmitidos en 
 
 La arquitectura respeta la separación de capas: el framework HTTP se limita a autenticar y verificar roles perimetrales; la lógica de negocio y permisos sobre recursos específicos reside en los casos de uso.
 
-### 4.1 Dependencias Reutilizables (`src/shared/auth/dependencies.py`)
+### 4.1 Dependencias Reutilizables (`app/backend/src/shared/auth/dependencies.py`)
 
 ```python
 """
-src/shared/auth/dependencies.py
+app/backend/src/shared/auth/dependencies.py
 Dependencias de seguridad perimetral de FastAPI.
 """
 from typing import Annotated, Sequence
@@ -200,8 +200,14 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 | Endpoint | Método | Roles Permitidos | Regla de Titularidad | Códigos HTTP | Propósito |
 |---|:---:|---|---|:---:|---|
 | `/api/v1/cohortes` | `GET` | *Público* (solo abiertas) / Todos | N/A | `200` | Listado de carreras y cohortes con inscripción vigente. |
-| `/api/v1/cohortes` | `POST` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `201`, `400`, `401`, `403` | Apertura de una nueva cohorte académica. |
+| `/api/v1/cohortes` | `POST` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `201`, `400`, `401`, `403`, `409` | Apertura de una cohorte con código de carrera y ordinal anual. |
 | `/api/v1/cohortes/{id}/estado` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | N/A | `200`, `404`, `401`, `403` | Cierre o apertura del período de inscripción. |
+| `/api/v1/cohortes/{id}/identificador` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | Puede completar cohortes heredadas; no permite cambiar el identificador después de emitir un número descriptivo. | `200`, `400`, `401`, `403`, `404`, `409` | Completa o corrige el código y ordinal de una cohorte existente. |
+
+El código identifica de forma estable a la carrera: no puede reutilizarse para otra carrera
+ni cambiarse entre cohortes de la misma carrera. El ordinal (1-99) distingue cohortes de una
+carrera dentro del año. Las cohortes heredadas pueden completar estos datos antes de emitir
+números; después, el identificador queda bloqueado para preservar la trazabilidad.
 
 ### 5.3 Legajos y Preinscripción (`/api/v1/legajos`)
 
@@ -214,6 +220,19 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 | `/api/v1/legajos/{id}` | `PUT` | `ASPIRANTE` | Solo titular y únicamente si estado es `BORRADOR` u `OBSERVADO`. | `200`, `400`, `403`, `404` | Actualización de datos personales y académicos previos al envío. |
 | `/api/v1/legajos/{id}/enviar` | `POST` | `ASPIRANTE` | Solo titular. Transiciona de `BORRADOR` u `OBSERVADO` a `ENVIADO`. | `200`, `400`, `403`, `404` | Envío formal de la postulación para auditoría administrativa. |
 | `/api/v1/legajos/{id}/estado` | `PATCH` | `ADMIN_POSGRADO`, `SUPERADMIN` | Exclusivo administradores. | `200`, `400`, `401`, `403`, `404` | Transición de estado (`EN_REVISION`, `OBSERVADO`, `APROBADO`, `RECHAZADO`). |
+
+**Estado de implementación del Core:** cada usuario puede tener un único legajo. La creación
+usa el perfil autenticado y una cohorte abierta; los datos no presentes en la tabla actual
+(nacionalidad, domicilio y antecedentes académicos del formulario visual) quedan fuera de
+este contrato hasta acordar una migración. La API documental acepta PDF de hasta 5 MB,
+valida la firma `%PDF` y almacena el archivo fuera del directorio público usando nombres
+generados por el servidor. El envío exige documentos `DNI` y `TITULO_GRADO`. Al aprobar se
+genera `numero_legajo` con el formato descriptivo `YY-CCCC-CC-NNN`; su justificación y las
+reglas de asignación están en [`DECISION_FORMATO_NUMERO_LEGAJO.md`](DECISION_FORMATO_NUMERO_LEGAJO.md).
+La respuesta del legajo incorpora el nombre oficial del posgrado y de la cohorte junto con
+el identificador, para que el operador no dependa de memorizar el código abreviado.
+Los criterios de integración visual y ejemplos de payload/respuesta están en
+[`INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md`](INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md).
 
 ### 5.4 Gestión Documental (`/api/v1/legajos/{id}/documentos` y `/api/v1/documentos`)
 
@@ -228,7 +247,7 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 
 ## 6. Máquina de Estados del Legajo y Permisos de Transición
 
-Las transiciones de estado son atómicas y están gobernadas por reglas de negocio puras en el dominio (`src/inscripcion/domain/estados.py`):
+Las transiciones de estado son atómicas y están gobernadas por reglas de negocio puras en el dominio (`app/backend/src/inscripcion/domain/estados.py`):
 
 ```
                         ┌─────────────┐
@@ -264,7 +283,7 @@ Las transiciones de estado son atómicas y están gobernadas por reglas de negoc
 | `ENVIADO` | `EN_REVISION` | `ADMIN_POSGRADO`, `SUPERADMIN` | Bloquea modificaciones y asigna auditor. |
 | `EN_REVISION` | `OBSERVADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | Requiere ingresar `motivo_observacion`. Habilita al `ASPIRANTE` a reemplazar documentos o corregir datos. |
 | `OBSERVADO` | `ENVIADO` | `ASPIRANTE` | Re-envío tras subsanar las observaciones señaladas. |
-| `EN_REVISION` | `APROBADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Genera `numero_legajo` único (formato `YY-NNN-CCC`), actualiza rol de usuario a `ALUMNO` y bloquea modificaciones futuras. |
+| `EN_REVISION` | `APROBADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Genera `numero_legajo` único (`YY-CCCC-CC-NNN`), actualiza rol de usuario a `ALUMNO` y bloquea modificaciones futuras. |
 | `EN_REVISION` | `RECHAZADO` | `ADMIN_POSGRADO`, `SUPERADMIN` | **Acción irreversible:** Requiere motivo formal de rechazo. Cierra el legajo. |
 
 ---
@@ -303,4 +322,3 @@ Para evitar fuga de información y facilitar la integración con el cliente Reac
   "timestamp": "2026-10-28T12:00:00Z"
 }
 ```
-

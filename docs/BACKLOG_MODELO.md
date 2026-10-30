@@ -80,7 +80,7 @@ Este documento define las historias de usuario base del proyecto. Cada equipo de
 - [ ] Solo el coordinador puede mover el legajo a "En Revisión" o "Aprobado"
 - [ ] Solo el aspirante puede mover su legajo de "Observado" a "Pendiente" (al corregir)
 - [ ] Cada cambio de estado queda registrado en un log de auditoría (quién, cuándo, de qué estado a qué estado)
-- [ ] Al aprobar se genera automáticamente el número de legajo (formato: AÑO-COHORTE-SECUENCIAL)
+- [x] Al aprobar se genera automáticamente el número de legajo descriptivo (`YY-CCCC-CC-NNN`); ver [decisión de formato](DECISION_FORMATO_NUMERO_LEGAJO.md)
 
 **Estimación:** 8 pts | **Prioridad:** Must | **Sprint:** 1-2
 

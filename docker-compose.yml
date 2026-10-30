@@ -4,9 +4,6 @@
 # =============================================================================
 
 services:
-  # ───────────────────────────────────────────────────────────────────────────
-  # 1. BASE DE DATOS: PostgreSQL 16 Alpine (Aislada en red backend)
-  # ───────────────────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: postgrado-db
@@ -19,7 +16,6 @@ services:
       POSTGRES_DB: ${DB_NAME:-postgrado_dev}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      # Expuesto solo a localhost para debugging seguro desde el host (evita exposición en LAN)
       - "127.0.0.1:5432:5432"
     volumes:
       - postgrado-pgdata:/var/lib/postgresql/data
@@ -33,9 +29,6 @@ services:
     networks:
       - backend_net
 
-  # ───────────────────────────────────────────────────────────────────────────
-  # 2. BACKEND API: FastAPI / Python 3.12 (Multi-Stage Hardened)
-  # ───────────────────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./app/backend
@@ -57,7 +50,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Montaje de código para desarrollo con live-reload sin romper paquetes instalados
       - ./app/backend/src:/app/src
       - ./app/backend/tests:/app/tests:ro
       - ./app/backend/pytest.ini:/app/pytest.ini:ro
@@ -72,9 +64,6 @@ services:
       - backend_net
       - frontend_net
 
-  # ───────────────────────────────────────────────────────────────────────────
-  # 3. FRONTEND: React 19 + TypeScript + Vite (Multi-Stage)
-  # ───────────────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./app/frontend
@@ -96,20 +85,12 @@ services:
     networks:
       - frontend_net
 
-# ─────────────────────────────────────────────────────────────────────────────
-# REDES SEGMENTADAS (Principio de Aislamiento de Red)
-# ─────────────────────────────────────────────────────────────────────────────
 networks:
-  # Red interna entre Frontend y Backend
   frontend_net:
     driver: bridge
-  # Red interna entre Backend y Base de Datos (Frontend NO tiene acceso directo a Postgres)
   backend_net:
     driver: bridge
 
-# ─────────────────────────────────────────────────────────────────────────────
-# VOLÚMENES PERSISTENTES
-# ─────────────────────────────────────────────────────────────────────────────
 volumes:
   postgrado-pgdata:
     name: postgrado-pgdata

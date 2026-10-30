@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_cohortes_abierta ON cohortes(abierta);
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS legajos (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    numero_legajo      VARCHAR(30) UNIQUE, -- Formato: AÑO-COHORTE-SECUENCIAL (ej: 26-001-045)
+    numero_legajo      VARCHAR(30) UNIQUE, -- Se asigna al aprobar el legajo
     usuario_id         UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     cohorte_id         UUID NOT NULL REFERENCES cohortes(id),
     dni                VARCHAR(20) NOT NULL,
@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS legajos (
                        CONSTRAINT semaforo_valido CHECK (semaforo IN ('VERDE', 'AMARILLO', 'ROJO')),
     created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_legajo_usuario UNIQUE (usuario_id),
     CONSTRAINT uq_legajo_cohorte_dni UNIQUE (cohorte_id, dni)
 );
 
@@ -160,4 +161,3 @@ VALUES (
     'ASPIRANTE',
     true
 ) ON CONFLICT (email) DO NOTHING;
-

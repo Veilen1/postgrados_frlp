@@ -16,6 +16,7 @@ RUN npm ci
 COPY . .
 
 # Usar usuario sin privilegios 'node' incluido en la imagen base
+RUN chown -R node:node /app
 USER node
 
 EXPOSE 3000
@@ -46,4 +47,3 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
-

@@ -1,33 +1,25 @@
-"""
-Punto de Entrada — API FastAPI Sistema de Posgrado UTN FRLP
-"""
-import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Dict, Any
-from fastapi import FastAPI, status, HTTPException
+from datetime import UTC, datetime
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from fastapi.responses import JSONResponse
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgrado_user:postgrado_dev_password@db:5432/postgrado_dev"
-)
-CORS_ORIGIN = os.getenv("CORS_ORIGIN", "http://localhost:3000")
+from src.shared.api.middleware import DocumentUploadLimitMiddleware
+from src.shared.api.router import api_router
+from src.shared.auth.errors import AuthenticationError
+from src.shared.config import get_settings
+from src.shared.database import engine
 
-# Asegurar protocolo asyncpg en URL
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+settings = get_settings()
 
-engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-async_session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup: verificación de conexión
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
-    # Shutdown: cerrar pool
     await engine.dispose()
+
 
 app = FastAPI(
     title="Sistema de Posgrado UTN FRLP — API Core",
@@ -35,41 +27,50 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
-# CORS Middleware para integración con frontend React
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[CORS_ORIGIN, "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=list(
+        dict.fromkeys([settings.cors_origin, "http://localhost:3000", "http://localhost:5173"])
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(DocumentUploadLimitMiddleware)
 
-@app.get("/api/v1/health", status_code=status.HTTP_200_OK, tags=["Sistema"])
-async def health_check() -> Dict[str, Any]:
-    """
-    Endpoint de monitoreo y healthcheck de contenedor.
-    Verifica conectividad activa con PostgreSQL.
-    """
-    db_status = "disconnected"
-    try:
-        async with async_session_factory() as session:
-            result = await session.execute(text("SELECT 1"))
-            if result.scalar() == 1:
-                db_status = "connected"
-    except Exception as exc:
-        db_status = f"error: {str(exc)}"
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"status": "degraded", "database": db_status}
-        )
+app.include_router(api_router, prefix="/api/v1")
 
-    return {
-        "status": "healthy",
-        "service": "postgrado-backend",
-        "version": "1.0.0",
-        "database": db_status
-    }
 
+@app.exception_handler(AuthenticationError)
+async def authentication_error_handler(
+    _: Request,
+    exception: AuthenticationError,
+) -> JSONResponse:
+    error = (
+        "UNAUTHORIZED"
+        if exception.status_code == 401
+        else "FORBIDDEN"
+        if exception.status_code == 403
+        else "CONFLICT"
+        if exception.status_code == 409
+        else "PAYLOAD_TOO_LARGE"
+        if exception.status_code == 413
+        else "UNSUPPORTED_MEDIA_TYPE"
+        if exception.status_code == 415
+        else "NOT_FOUND"
+        if exception.status_code == 404
+        else "VALIDATION_ERROR"
+    )
+    return JSONResponse(
+        status_code=exception.status_code,
+        headers=exception.headers,
+        content={
+            "statusCode": exception.status_code,
+            "error": error,
+            "message": exception.detail,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    )
