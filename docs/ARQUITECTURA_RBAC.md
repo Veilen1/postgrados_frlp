@@ -231,6 +231,8 @@ genera `numero_legajo` con el formato descriptivo `YY-CCCC-CC-NNN`; su justifica
 reglas de asignación están en [`DECISION_FORMATO_NUMERO_LEGAJO.md`](DECISION_FORMATO_NUMERO_LEGAJO.md).
 La respuesta del legajo incorpora el nombre oficial del posgrado y de la cohorte junto con
 el identificador, para que el operador no dependa de memorizar el código abreviado.
+Los criterios de integración visual y ejemplos de payload/respuesta están en
+[`INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md`](INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md).
 
 ### 5.4 Gestión Documental (`/api/v1/legajos/{id}/documentos` y `/api/v1/documentos`)
 
