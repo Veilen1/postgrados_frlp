@@ -56,4 +56,14 @@ export const inscripcionService = {
       body: JSON.stringify(payload),
     });
   },
+  subirDocumento: async (legajoId, tipoDocumento, archivo) => {
+    const formData = new FormData();
+    formData.append('file', archivo);
+    formData.append('tipo', tipoDocumento);
+    // Al usar FormData no seteamos Content-Type manual: el navegador agrega el boundary automáticamente
+    return await request(`${API_URL}/legajos/${legajoId}/documentos`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
