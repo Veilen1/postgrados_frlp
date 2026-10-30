@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from src.cohortes.models import Cohorte  # noqa: F401
 from src.legajos.models import AuditoriaLegajo, Documento, Legajo  # noqa: F401
 from src.main import app
+from src.shared.config import get_storage_path
 from src.shared.database import Base, get_db
 from src.shared.models import RefreshSession, User  # noqa: F401
 
@@ -35,12 +37,14 @@ async def test_session_factory() -> AsyncIterator[async_sessionmaker[AsyncSessio
 @pytest_asyncio.fixture
 async def client(
     test_session_factory: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
 ) -> AsyncIterator[AsyncClient]:
     async def override_get_db() -> AsyncIterator[AsyncSession]:
         async with test_session_factory() as session:
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_storage_path] = lambda: tmp_path / "private-storage"
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app),

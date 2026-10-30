@@ -20,17 +20,13 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     bind = op.get_bind()
     existing_constraints = {
-        constraint["name"]
-        for constraint in sa.inspect(bind).get_unique_constraints("legajos")
+        constraint["name"] for constraint in sa.inspect(bind).get_unique_constraints("legajos")
     }
     if "uq_legajo_usuario" in existing_constraints:
         return
 
     duplicate = bind.execute(
-        sa.text(
-            "SELECT usuario_id FROM legajos "
-            "GROUP BY usuario_id HAVING COUNT(*) > 1 LIMIT 1"
-        )
+        sa.text("SELECT usuario_id FROM legajos GROUP BY usuario_id HAVING COUNT(*) > 1 LIMIT 1")
     ).first()
     if duplicate is not None:
         raise RuntimeError(

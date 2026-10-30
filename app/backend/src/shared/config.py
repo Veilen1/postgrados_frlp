@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     jwt_issuer: str = "utn-frlp-posgrado-auth"
     cors_origin: str = "http://localhost:3000"
     environment: str = "development"
+    storage_path: Path = Path("var/postgrado-storage")
 
     @field_validator("jwt_secret")
     @classmethod
@@ -66,3 +67,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_storage_path() -> Path:
+    return get_settings().storage_path

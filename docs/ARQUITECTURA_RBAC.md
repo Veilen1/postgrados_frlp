@@ -218,10 +218,11 @@ A continuación se detalla la matriz canónica de autorización para los endpoin
 **Estado de implementación del Core:** cada usuario puede tener un único legajo. La creación
 usa el perfil autenticado y una cohorte abierta; los datos no presentes en la tabla actual
 (nacionalidad, domicilio y antecedentes académicos del formulario visual) quedan fuera de
-este contrato hasta acordar una migración. El envío exige documentos `DNI` y `TITULO_GRADO`,
-pero la API de carga documental todavía no está implementada. La transición a `APROBADO`
-queda pendiente de definir cómo se genera el segmento de cohorte del `numero_legajo`
-(`YY-NNN-CCC`); hasta entonces la API la rechaza explícitamente.
+este contrato hasta acordar una migración. La API documental acepta PDF de hasta 5 MB,
+valida la firma `%PDF` y almacena el archivo fuera del directorio público usando nombres
+generados por el servidor. El envío exige documentos `DNI` y `TITULO_GRADO`. La transición a
+`APROBADO` queda pendiente de definir cómo se genera el segmento de cohorte del
+`numero_legajo` (`YY-NNN-CCC`); hasta entonces la API la rechaza explícitamente.
 
 ### 5.4 Gestión Documental (`/api/v1/legajos/{id}/documentos` y `/api/v1/documentos`)
 

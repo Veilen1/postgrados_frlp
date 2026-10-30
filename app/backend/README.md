@@ -68,6 +68,10 @@ python -m pytest --cov=src.auth --cov=src.legajos --cov=src.shared.auth --cov=sr
 | `PUT` | `/api/v1/legajos/{legajo_id}` | Edita datos del titular en estado `BORRADOR` u `OBSERVADO` |
 | `POST` | `/api/v1/legajos/{legajo_id}/enviar` | Envía una preinscripción con documentos `DNI` y `TITULO_GRADO` cargados |
 | `PATCH` | `/api/v1/legajos/{legajo_id}/estado` | Revisa, observa o rechaza; requiere rol administrativo |
+| `POST` | `/api/v1/legajos/{legajo_id}/documentos` | Carga un PDF en el almacenamiento privado del legajo |
+| `GET` | `/api/v1/legajos/{legajo_id}/documentos` | Lista metadatos de documentos del titular o administración |
+| `GET` | `/api/v1/documentos/{document_id}/download` | Descarga un PDF como adjunto; titular o administración |
+| `DELETE` | `/api/v1/documentos/{document_id}` | Elimina un documento del titular en estado editable |
 | `GET` | `/api/v1/health` | Healthcheck de la API y PostgreSQL |
 | `GET` | `/api/v1/health/ready` | Readiness de la API y PostgreSQL |
 | `GET` | `/api/v1/health/live` | Liveness de la API |
@@ -129,10 +133,15 @@ perfil autenticado; el cliente solo indica cohorte, DNI y datos de beca, y no pu
 el `usuario_id`. La lista administrativa acepta `page` (1 en adelante), `page_size` (1-100),
 `cohorte_id` y `estado`. Los estados se registran en `auditoria_legajos`.
 
-El envío valida la presencia de los documentos `DNI` y `TITULO_GRADO` en la tabla existente.
-La carga/descarga de documentos aún no está implementada, por lo que un legajo sin ambos
-archivos no se puede enviar desde la API. La aprobación también queda pendiente hasta definir
-la generación del número de legajo `YY-NNN-CCC`; el endpoint devuelve un error explícito
-mientras no exista esa regla. Los campos del formulario visual que no existen en el esquema
-actual quedan fuera de esta API. Los contratos RBAC completos están en
+La carga documental recibe multipart/form-data con campos `tipo` y `archivo`. Los tipos
+admitidos son `DNI`, `TITULO_GRADO`, `PARTIDA`, `CUIT_CUIL`, `FORM_INSCRIPCION`, `FORM_BECA`,
+`TITULO_POSGRADO` y `CV`. Solo se aceptan archivos con firma `%PDF` de hasta 5 MiB. El
+almacenamiento usa el volumen privado `STORAGE_PATH`, nunca una ruta ni nombre proporcionado
+por el cliente; el listado no expone rutas internas ni checksums. La carga y eliminación
+requieren que el titular tenga su legajo en estado `BORRADOR` u `OBSERVADO`. El envío valida
+la presencia de `DNI` y `TITULO_GRADO`.
+
+La aprobación sigue pendiente hasta definir la generación del número de legajo `YY-NNN-CCC`;
+el endpoint devuelve un error explícito mientras no exista esa regla. Los campos del
+formulario visual que no existen en el esquema actual quedan fuera de esta API. Los contratos RBAC completos están en
 [`docs/ARQUITECTURA_RBAC.md`](../../docs/ARQUITECTURA_RBAC.md).

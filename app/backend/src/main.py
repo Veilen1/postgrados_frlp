@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.shared.api.middleware import DocumentUploadLimitMiddleware
 from src.shared.api.router import api_router
 from src.shared.auth.errors import AuthenticationError
 from src.shared.config import get_settings
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(DocumentUploadLimitMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 
@@ -54,6 +56,10 @@ async def authentication_error_handler(
         if exception.status_code == 403
         else "CONFLICT"
         if exception.status_code == 409
+        else "PAYLOAD_TOO_LARGE"
+        if exception.status_code == 413
+        else "UNSUPPORTED_MEDIA_TYPE"
+        if exception.status_code == 415
         else "NOT_FOUND"
         if exception.status_code == 404
         else "VALIDATION_ERROR"
