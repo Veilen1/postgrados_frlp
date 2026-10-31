@@ -383,7 +383,7 @@ export default function Preinscripcion() {
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
         { archivo: archivos.dni, tipo: 'DNI' },
-        { archivo: archivos.analitico, tipo: 'ANALITICO' },
+        
         { archivo: archivos.cv, tipo: 'CV' },
       ];
 
