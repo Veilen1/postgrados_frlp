@@ -127,7 +127,7 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, o
   </>
 );
 
-const Paso4Resumen = ({ formData, archivos, cargando, onPrev, onConfirm }) => {
+const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConfirm }) => {
   const formatSize = (bytes) => {
     if (!bytes) return '';
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -189,6 +189,25 @@ const Paso4Resumen = ({ formData, archivos, cargando, onPrev, onConfirm }) => {
           </li>
         </ul>
       </div>
+      {errorEnvio && (
+        <div style={{
+          background: '#f8d7da',
+          color: '#721c24',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          border: '1px solid #f5c6cb',
+          marginTop: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          <div>
+            <strong>Error al enviar preinscripción:</strong>
+            <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>{errorEnvio}</p>
+          </div>
+        </div>
+      )}
       <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
         <button 
           className="btn-secondary" 
@@ -214,6 +233,7 @@ const Paso4Resumen = ({ formData, archivos, cargando, onPrev, onConfirm }) => {
 export default function Preinscripcion() {
   const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState(null);
   const [errores, setErrores] = useState({});
   const [erroresArchivos, setErroresArchivos] = useState({});
   const [formData, setFormData] = useState({
@@ -308,6 +328,7 @@ export default function Preinscripcion() {
   
  const handleConfirm = async () => {
     setCargando(true);
+    setErrorEnvio(null);
     try {
       // 1. Crear el legajo en el backend con los datos del aspirante
       const legajo = await inscripcionService.crearPreinscripcion(formData);
@@ -329,7 +350,7 @@ export default function Preinscripcion() {
       alert('¡Preinscripción y documentación enviadas con éxito!');
     } catch (error) {
       console.error('Error en el proceso de inscripción:', error);
-      alert(`Error al procesar: ${error.message}`);
+      setErrorEnvio(error.message);
     } finally {
       setCargando(false);
     }
@@ -383,7 +404,8 @@ export default function Preinscripcion() {
             formData={formData}
             archivos={archivos}
             cargando={cargando}
-            onPrev={() => setPaso(3)}
+            errorEnvio={errorEnvio}
+            onPrev={() => { setErrorEnvio(null); setPaso(3); }}
             onConfirm={handleConfirm}
           />
         )}
