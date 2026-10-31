@@ -290,16 +290,30 @@ export default function Preinscripcion() {
       setPaso(4);
     }
   };
+  
  const handleConfirm = async () => {
     try {
       // 1. Crear el legajo en el backend con los datos del aspirante
       const legajo = await inscripcionService.crearPreinscripcion(formData);
-      console.log('Legajo creado exitosamente:', legajo);
-      
-      alert('¡Datos de preinscripción registrados con éxito!');
+      const legajoId = legajo?.id || legajo?.legajo_id;
+      console.log('Legajo creado exitosamente. ID:', legajoId);
+      // 2. Subir los archivos PDF adjuntos asociados a este legajo
+      const documentosAEnviar = [
+        { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
+        { archivo: archivos.dni, tipo: 'DNI' },
+        { archivo: archivos.analitico, tipo: 'ANALITICO' },
+        { archivo: archivos.cv, tipo: 'CV' },
+      ];
+      for (const doc of documentosAEnviar) {
+        if (doc.archivo) {
+          await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
+          console.log(`Documento subido: ${doc.tipo}`);
+        }
+      }
+      alert('¡Preinscripción y documentación enviadas con éxito!');
     } catch (error) {
-      console.error('Error al registrar preinscripción:', error);
-      alert(`Error al registrar: ${error.message}`);
+      console.error('Error en el proceso de inscripción:', error);
+      alert(`Error al procesar: ${error.message}`);
     }
   };
   
