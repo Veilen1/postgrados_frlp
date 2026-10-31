@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { inscripcionService } from '../services/inscripcionService';
 
 const Paso1DatosPersonales = ({ formData, handleChange, errores, onNext }) => (
   <>
@@ -289,21 +290,19 @@ export default function Preinscripcion() {
       setPaso(4);
     }
   };
-
-  const handleConfirm = () => {
-    alert('¡Preinscripción enviada con éxito!');
-    setPaso(1);
-    setFormData({
-      nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
-      titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
-    });
-    setArchivos({
-      titulo: null,
-      analitico: null,
-      cv: null,
-      dni: null,
-    });
+ const handleConfirm = async () => {
+    try {
+      // 1. Crear el legajo en el backend con los datos del aspirante
+      const legajo = await inscripcionService.crearPreinscripcion(formData);
+      console.log('Legajo creado exitosamente:', legajo);
+      
+      alert('¡Datos de preinscripción registrados con éxito!');
+    } catch (error) {
+      console.error('Error al registrar preinscripción:', error);
+      alert(`Error al registrar: ${error.message}`);
+    }
   };
+  
 
   return (
     <div>
