@@ -189,6 +189,7 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
           </li>
         </ul>
       </div>
+
       {errorEnvio && (
         <div style={{
           background: '#f8d7da',
@@ -208,6 +209,7 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
           </div>
         </div>
       )}
+
       <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
         <button 
           className="btn-secondary" 
@@ -230,10 +232,52 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
   );
 };
 
+const Paso5Exito = ({ legajoConfirmado, onReset }) => (
+  <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+    <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>✅</div>
+    <h2 style={{ color: '#28a745', marginBottom: '10px' }}>¡Preinscripción Registrada con Éxito!</h2>
+    <p style={{ color: '#555', fontSize: '1.05rem', maxWidth: '540px', margin: '0 auto 25px' }}>
+      Tu solicitud y la documentación digital requerida fueron procesadas correctamente por el sistema de posgrado.
+    </p>
+
+    <div className="resumen-box" style={{ maxWidth: '540px', margin: '0 auto 25px', textAlign: 'left', borderLeft: '4px solid #28a745' }}>
+      <div className="resumen-item" style={{ marginBottom: '12px' }}>
+        <span style={{ fontSize: '0.85rem', color: '#6c757d' }}>IDENTIFICADOR DE TRÁMITE / LEGAJO</span>
+        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1a1a1a', margin: '4px 0 0' }}>
+          {legajoConfirmado?.id || 'Generado'}
+        </p>
+      </div>
+      <div className="resumen-grid">
+        <div className="resumen-item">
+          <span>Aspirante</span>
+          <p>{legajoConfirmado?.nombre || '-'}</p>
+        </div>
+        <div className="resumen-item">
+          <span>Carrera</span>
+          <p>{legajoConfirmado?.posgrado || '-'}</p>
+        </div>
+        <div className="resumen-item" style={{ gridColumn: '1 / -1' }}>
+          <span>Notificaciones enviadas a</span>
+          <p>{legajoConfirmado?.email || '-'}</p>
+        </div>
+      </div>
+    </div>
+
+    <div style={{ background: '#e8f4fd', color: '#0c5460', padding: '12px 18px', borderRadius: '8px', maxWidth: '540px', margin: '0 auto 25px', fontSize: '0.9rem' }}>
+      ℹ️ La Secretaría de Posgrado auditará los documentos adjuntos y te notificará por correo electrónico ante cualquier novedad.
+    </div>
+
+    <button className="btn-primary" style={{ minWidth: '220px' }} onClick={onReset}>
+      Iniciar Nueva Preinscripción
+    </button>
+  </div>
+);
+
 export default function Preinscripcion() {
   const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState(null);
+  const [legajoConfirmado, setLegajoConfirmado] = useState(null);
   const [errores, setErrores] = useState({});
   const [erroresArchivos, setErroresArchivos] = useState({});
   const [formData, setFormData] = useState({
@@ -325,8 +369,8 @@ export default function Preinscripcion() {
       setPaso(4);
     }
   };
-  
- const handleConfirm = async () => {
+
+  const handleConfirm = async () => {
     setCargando(true);
     setErrorEnvio(null);
     try {
@@ -334,6 +378,7 @@ export default function Preinscripcion() {
       const legajo = await inscripcionService.crearPreinscripcion(formData);
       const legajoId = legajo?.id || legajo?.legajo_id;
       console.log('Legajo creado exitosamente. ID:', legajoId);
+
       // 2. Subir los archivos PDF adjuntos asociados a este legajo
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
@@ -341,13 +386,21 @@ export default function Preinscripcion() {
         { archivo: archivos.analitico, tipo: 'ANALITICO' },
         { archivo: archivos.cv, tipo: 'CV' },
       ];
+
       for (const doc of documentosAEnviar) {
         if (doc.archivo) {
           await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
           console.log(`Documento subido: ${doc.tipo}`);
         }
       }
-      alert('¡Preinscripción y documentación enviadas con éxito!');
+
+      setLegajoConfirmado({
+        id: legajoId,
+        nombre: `${formData.nombre} ${formData.apellido}`,
+        email: formData.email,
+        posgrado: formData.posgrado,
+      });
+      setPaso(5);
     } catch (error) {
       console.error('Error en el proceso de inscripción:', error);
       setErrorEnvio(error.message);
@@ -355,7 +408,22 @@ export default function Preinscripcion() {
       setCargando(false);
     }
   };
-  
+
+  const handleReset = () => {
+    setPaso(1);
+    setLegajoConfirmado(null);
+    setErrorEnvio(null);
+    setFormData({
+      nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
+      titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
+    });
+    setArchivos({
+      titulo: null,
+      analitico: null,
+      cv: null,
+      dni: null,
+    });
+  };
 
   return (
     <div>
@@ -367,7 +435,8 @@ export default function Preinscripcion() {
           <span className={`step ${paso === 1 ? 'active' : (paso > 1 ? 'completed' : '')}`}><span className="circle">{paso > 1 ? '✓' : '1'}</span> Datos Personales</span>
           <span className={`step ${paso === 2 ? 'active' : (paso > 2 ? 'completed' : '')}`}>— <span className="circle">{paso > 2 ? '✓' : '2'}</span> Datos Academicos</span>
           <span className={`step ${paso === 3 ? 'active' : (paso > 3 ? 'completed' : '')}`}>— <span className="circle">{paso > 3 ? '✓' : '3'}</span> Documentación</span>
-          <span className={`step ${paso === 4 ? 'active' : ''}`}>— <span className="circle">4</span> Resumen</span>
+          <span className={`step ${paso === 4 ? 'active' : (paso > 4 ? 'completed' : '')}`}>— <span className="circle">{paso > 4 ? '✓' : '4'}</span> Resumen</span>
+          {paso === 5 && <span className="step active">— <span className="circle">✓</span> Confirmación</span>}
         </div>
         
         {paso === 1 && (
@@ -407,6 +476,13 @@ export default function Preinscripcion() {
             errorEnvio={errorEnvio}
             onPrev={() => { setErrorEnvio(null); setPaso(3); }}
             onConfirm={handleConfirm}
+          />
+        )}
+
+        {paso === 5 && (
+          <Paso5Exito
+            legajoConfirmado={legajoConfirmado}
+            onReset={handleReset}
           />
         )}
       </div>
