@@ -7,6 +7,7 @@ import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.js
 import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
 import VistaPostgrados from './components/VistaPostgrados.jsx';
 import { VistaEstadisticas } from './components/VistaEstadisticas.jsx';
+import { authService } from './services/authService';
 
 // --- LOGIN ---
 function Login({ onLogin }) {
@@ -14,7 +15,7 @@ function Login({ onLogin }) {
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const emailNormalizado = user.trim();
 
@@ -35,10 +36,11 @@ function Login({ onLogin }) {
       return;
     }
 
-    if (user === 'admin' && pass === 'admin') {
-      onLogin(); 
-    } else {
-      setError('Usuario o contraseña incorrectos');
+    try {
+      await authService.login(emailNormalizado, pass);
+      onLogin();
+    } catch (err) {
+      setError(err.message || 'Error al iniciar sesión');
     }
   };
 
