@@ -1,22 +1,12 @@
-import React, { useState, useMemo } from 'react';
-
-/**
- * Datos simulados iniciales (Mock Data) mientras se prepara la carga asíncrona.
- */
-const MOCK_INSCRIPCIONES = [
-  { id: 1, alumno: 'María González', legajo: 'POS-2024-01', posgrado: 'Maestría en Ciencia de Datos', cohorte: '2024-1', estado: 'Aprobada', fecha: '2024-03-15' },
-  { id: 2, alumno: 'Lucas Benítez', legajo: 'POS-2024-02', posgrado: 'Especialización en Software', cohorte: '2024-1', estado: 'Pendiente', fecha: '2024-03-18' },
-  { id: 3, alumno: 'Carla Ruiz', legajo: 'POS-2023-89', posgrado: 'Doctorado en Informática', cohorte: '2023-2', estado: 'Rechazada', fecha: '2024-03-10' },
-  { id: 4, alumno: 'Javier Martínez', legajo: 'POS-2024-05', posgrado: 'Maestría en Ciencia de Datos', cohorte: '2024-1', estado: 'Aprobada', fecha: '2024-03-20' },
-  { id: 5, alumno: 'Sofía Rossi', legajo: 'POS-2024-12', posgrado: 'Especialización en Software', cohorte: '2024-1', estado: 'Pendiente', fecha: '2024-03-21' },
-];
+import React, { useState, useMemo, useEffect } from 'react';
+import { legajoService } from '../services/legajoService';
 
 export const PanelConduccionInscripciones = () => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
   // ---------------------------------------------------------------------------
-  const [inscripciones, setInscripciones] = useState(MOCK_INSCRIPCIONES);
-  const [cargando, setCargando] = useState(false);
+  const [inscripciones, setInscripciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
   const [busqueda, setBusqueda] = useState('');
@@ -24,21 +14,57 @@ export const PanelConduccionInscripciones = () => {
   const [filtroEstado, setFiltroEstado] = useState('Todos');
 
   // ---------------------------------------------------------------------------
+  // CARGA ASÍNCRONA DE DATOS (API REST)
+  // Consume GET /api/v1/legajos extrayendo data.items
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    let activo = true;
+
+    async function cargarLegajos() {
+      try {
+        setCargando(true);
+        setError(null);
+        const data = await legajoService.obtenerLegajos({ pageSize: 100 });
+        if (activo) {
+          // Contrato de FastAPI: la lista de legajos viene dentro de data.items
+          setInscripciones(Array.isArray(data?.items) ? data.items : []);
+        }
+      } catch (err) {
+        if (activo) {
+          setError(err.message || 'Error al conectar con el servicio de legajos.');
+        }
+      } finally {
+        if (activo) {
+          setCargando(false);
+        }
+      }
+    }
+
+    cargarLegajos();
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // FILTRADO INTELIGENTE
-  // Filtra de forma reactiva sobre el estado `inscripciones`
   // ---------------------------------------------------------------------------
   const inscripcionesFiltradas = useMemo(() => {
     const query = busqueda.trim().toLowerCase();
 
     return inscripciones.filter((item) => {
-      // Búsqueda flexible por nombre de alumno o número de legajo
+      const nombreCompleto = `${item.nombre || ''} ${item.apellido || ''}`.trim().toLowerCase();
+      const legajoTexto = (item.numero_legajo || '').toLowerCase();
+
       const coincideTexto =
         query === '' ||
-        item.alumno.toLowerCase().includes(query) ||
-        item.legajo.toLowerCase().includes(query);
+        nombreCompleto.includes(query) ||
+        legajoTexto.includes(query);
 
-      // Filtros categóricos por valor exacto
-      const coincidePosgrado = filtroPosgrado === 'Todos' || item.posgrado === filtroPosgrado;
+      const posgradoNombre = item.cohorte?.carrera || item.cohorte?.nombre || item.posgrado || '';
+      const coincidePosgrado = filtroPosgrado === 'Todos' || posgradoNombre === filtroPosgrado;
+
       const coincideEstado = filtroEstado === 'Todos' || item.estado === filtroEstado;
 
       return coincideTexto && coincidePosgrado && coincideEstado;
@@ -119,13 +145,13 @@ export const PanelConduccionInscripciones = () => {
             {inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
                 <tr key={row.id}>
-                  <td className="font-mono">{row.legajo}</td>
-                  <td className="font-semibold">{row.alumno}</td>
-                  <td>{row.posgrado}</td>
-                  <td>{row.cohorte}</td>
-                  <td>{row.fecha}</td>
+                  <td className="font-mono">{row.numero_legajo || 'Sin asignar'}</td>
+                  <td className="font-semibold">{`${row.nombre || ''} ${row.apellido || ''}`.trim() || 'Sin nombre'}</td>
+                  <td>{row.cohorte?.carrera || row.cohorte?.nombre || '-'}</td>
+                  <td>{row.cohorte?.nombre || row.cohorte?.anio || '-'}</td>
+                  <td>{row.fecha_inscripcion ? new Date(row.fecha_inscripcion).toLocaleDateString('es-AR') : '-'}</td>
                   <td>
-                    <span className={`badge badge-${row.estado.toLowerCase()}`}>
+                    <span className={`badge badge-${(row.estado || '').toLowerCase()}`}>
                       {row.estado}
                     </span>
                   </td>
@@ -134,7 +160,7 @@ export const PanelConduccionInscripciones = () => {
             ) : (
               <tr>
                 <td colSpan="6" className="text-center empty-state">
-                  No se encontraron inscripciones que coincidan con los filtros.
+                  No se encontraron inscripciones registradas.
                 </td>
               </tr>
             )}
