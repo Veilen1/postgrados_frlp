@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 
 /**
- * Datos simulados (Mock Data) fuera del componente para evitar recargar la memoria en cada actualización.
+ * Datos simulados iniciales (Mock Data) mientras se prepara la carga asíncrona.
  */
 const MOCK_INSCRIPCIONES = [
   { id: 1, alumno: 'María González', legajo: 'POS-2024-01', posgrado: 'Maestría en Ciencia de Datos', cohorte: '2024-1', estado: 'Aprobada', fecha: '2024-03-15' },
@@ -15,20 +15,23 @@ export const PanelConduccionInscripciones = () => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
   // ---------------------------------------------------------------------------
+  const [inscripciones, setInscripciones] = useState(MOCK_INSCRIPCIONES);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+
   const [busqueda, setBusqueda] = useState('');
   const [filtroPosgrado, setFiltroPosgrado] = useState('Todos');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
 
-// ---------------------------------------------------------------------------
-// FILTRADO INTELIGENTE (Para que la app vaya más rápido)
-// useMemo guarda el resultado de la búsqueda y solo vuelve a buscar 
-// si cambias los filtros (como el texto o las opciones seleccionadas).
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // FILTRADO INTELIGENTE
+  // Filtra de forma reactiva sobre el estado `inscripciones`
+  // ---------------------------------------------------------------------------
   const inscripcionesFiltradas = useMemo(() => {
     const query = busqueda.trim().toLowerCase();
 
-    return MOCK_INSCRIPCIONES.filter((item) => {
-      // Búsqueda flexible por nombre de alumno o número de legajo (encuentra coincidencias aunque haya pequeños errores al escribir)
+    return inscripciones.filter((item) => {
+      // Búsqueda flexible por nombre de alumno o número de legajo
       const coincideTexto =
         query === '' ||
         item.alumno.toLowerCase().includes(query) ||
@@ -40,7 +43,7 @@ export const PanelConduccionInscripciones = () => {
 
       return coincideTexto && coincidePosgrado && coincideEstado;
     });
-  }, [busqueda, filtroPosgrado, filtroEstado]);
+  }, [inscripciones, busqueda, filtroPosgrado, filtroEstado]);
 
   // Handler para limpiar los filtros con un solo click
   const handleLimpiarFiltros = () => {
@@ -115,7 +118,6 @@ export const PanelConduccionInscripciones = () => {
           <tbody>
             {inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
-                // La propiedad key es requerida por el Reconciliador de React
                 <tr key={row.id}>
                   <td className="font-mono">{row.legajo}</td>
                   <td className="font-semibold">{row.alumno}</td>
@@ -123,7 +125,6 @@ export const PanelConduccionInscripciones = () => {
                   <td>{row.cohorte}</td>
                   <td>{row.fecha}</td>
                   <td>
-                    {/* Interpolación dinámica de clases CSS según el dominio del estado */}
                     <span className={`badge badge-${row.estado.toLowerCase()}`}>
                       {row.estado}
                     </span>
@@ -131,7 +132,6 @@ export const PanelConduccionInscripciones = () => {
                 </tr>
               ))
             ) : (
-              /* Fallback en caso de búsquedas sin coincidencias */
               <tr>
                 <td colSpan="6" className="text-center empty-state">
                   No se encontraron inscripciones que coincidan con los filtros.
