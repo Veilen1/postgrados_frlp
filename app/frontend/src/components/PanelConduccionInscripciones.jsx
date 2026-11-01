@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { legajoService } from '../services/legajoService';
 
 /**
@@ -100,36 +100,24 @@ export const PanelConduccionInscripciones = () => {
   const [filtroEstado, setFiltroEstado] = useState('Todos');
 
   // ---------------------------------------------------------------------------
-  // CARGA ASÍNCRONA DE DATOS (API REST)
+  // FUNCIÓN DE CARGA ASÍNCRONA (Reutilizable para reintentos)
   // ---------------------------------------------------------------------------
-  useEffect(() => {
-    let activo = true;
-
-    async function cargarLegajos() {
-      try {
-        setCargando(true);
-        setError(null);
-        const data = await legajoService.obtenerLegajos({ pageSize: 100 });
-        if (activo) {
-          setInscripciones(Array.isArray(data?.items) ? data.items : []);
-        }
-      } catch (err) {
-        if (activo) {
-          setError(err.message || 'Error al conectar con el servicio de legajos.');
-        }
-      } finally {
-        if (activo) {
-          setCargando(false);
-        }
-      }
+  const cargarLegajos = useCallback(async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      const data = await legajoService.obtenerLegajos({ pageSize: 100 });
+      setInscripciones(Array.isArray(data?.items) ? data.items : []);
+    } catch (err) {
+      setError(err.message || 'Error al conectar con el servicio de legajos.');
+    } finally {
+      setCargando(false);
     }
-
-    cargarLegajos();
-
-    return () => {
-      activo = false;
-    };
   }, []);
+
+  useEffect(() => {
+    cargarLegajos();
+  }, [cargarLegajos]);
 
   // Extrae la lista única de posgrados devueltos por el backend para el filtro
   const opcionesPosgrados = useMemo(() => {
@@ -181,9 +169,38 @@ export const PanelConduccionInscripciones = () => {
       <header className="panel-header">
         <h2>Gestión de Inscripciones - Conducción</h2>
         <span className="badge-count">
-          {inscripcionesFiltradas.length} resultados
+          {cargando ? 'Cargando...' : `${inscripcionesFiltradas.length} resultados`}
         </span>
       </header>
+
+      {/* Banner de error con botón de reintento */}
+      {error && (
+        <div 
+          role="alert" 
+          style={{
+            backgroundColor: '#f8d7da',
+            color: '#842029',
+            border: '1px solid #f5c2c7',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            marginBottom: '15px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span><strong>Aviso:</strong> {error}</span>
+          <button 
+            type="button" 
+            className="btn-primary" 
+            style={{ padding: '6px 14px', fontSize: '13px' }}
+            onClick={cargarLegajos}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <div className="filtros-bar" role="search" aria-label="Filtros de inscripciones">
         <input
           type="text"
@@ -192,14 +209,16 @@ export const PanelConduccionInscripciones = () => {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           aria-label="Buscar por alumno, DNI o legajo"
+          disabled={cargando}
         />
         
-        {/* Filtro dinámico de Posgrados según datos reales del backend */}
+        {/* Filtro dinámico de Posgrados */}
         <select 
           className="select-filter"
           value={filtroPosgrado} 
           onChange={(e) => setFiltroPosgrado(e.target.value)}
           aria-label="Filtrar por posgrado"
+          disabled={cargando}
         >
           <option value="Todos">Todos los Posgrados</option>
           {opcionesPosgrados.map((posgrado) => (
@@ -207,12 +226,13 @@ export const PanelConduccionInscripciones = () => {
           ))}
         </select>
 
-        {/* Filtro con estados oficiales RBAC en mayúsculas */}
+        {/* Filtro con estados oficiales RBAC */}
         <select 
           className="select-filter"
           value={filtroEstado} 
           onChange={(e) => setFiltroEstado(e.target.value)}
           aria-label="Filtrar por estado"
+          disabled={cargando}
         >
           <option value="Todos">Todos los Estados</option>
           {ESTADOS_RBAC.map((est) => (
@@ -224,7 +244,7 @@ export const PanelConduccionInscripciones = () => {
           type="button" 
           className="btn-reset" 
           onClick={handleLimpiarFiltros}
-          disabled={!busqueda && filtroPosgrado === 'Todos' && filtroEstado === 'Todos'}
+          disabled={cargando || (!busqueda && filtroPosgrado === 'Todos' && filtroEstado === 'Todos')}
         >
           Resetear
         </button>
@@ -243,7 +263,13 @@ export const PanelConduccionInscripciones = () => {
             </tr>
           </thead>
           <tbody>
-            {inscripcionesFiltradas.length > 0 ? (
+            {cargando ? (
+              <tr>
+                <td colSpan="6" className="text-center" style={{ padding: '30px', color: '#6c757d' }}>
+                  <p style={{ margin: 0, fontSize: '14px' }}>Cargando inscripciones desde el servidor...</p>
+                </td>
+              </tr>
+            ) : inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
                 <tr key={row.id}>
                   <td>{renderNumeroLegajo(row.numero_legajo)}</td>
@@ -257,7 +283,9 @@ export const PanelConduccionInscripciones = () => {
             ) : (
               <tr>
                 <td colSpan="6" className="text-center empty-state">
-                  No se encontraron inscripciones registradas.
+                  {busqueda || filtroPosgrado !== 'Todos' || filtroEstado !== 'Todos'
+                    ? 'No se encontraron inscripciones que coincidan con los filtros aplicados.'
+                    : 'No hay inscripciones registradas en el sistema.'}
                 </td>
               </tr>
             )}
