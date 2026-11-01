@@ -120,9 +120,16 @@ function Login({ onLogin }) {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Persistencia de sesión: verifica si ya existe token en el storage al cargar
+  const [isLoggedIn, setIsLoggedIn] = useState(() => authService.isAuthenticated());
   const [vista, setVista] = useState('inscripciones');
   const [legajoBuscado, setLegajoBuscado] = useState(null);
+
+  // Cierre de sesión limpio: elimina tokens y actualiza vista
+  const handleLogout = () => {
+    authService.logout();
+    setIsLoggedIn(false);
+  };
 
   if (!isLoggedIn) {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
@@ -135,7 +142,7 @@ export default function App() {
           <button className="active" onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
           <button onClick={() => setVista('docente')}>Docente</button>
           <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
         </nav>
         <Preinscripcion />
       </>
@@ -149,7 +156,7 @@ export default function App() {
           <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
           <button className="active" onClick={() => setVista('docente')}>Docente</button>
           <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
         </nav>
         <PanelDocente />
       </>
@@ -167,7 +174,7 @@ export default function App() {
         <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
         <button onClick={() => setVista('docente')}>Docente</button>
         <button className="active" onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-        <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+        <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
       </nav>
       
       <div className="conduccion-layout">
