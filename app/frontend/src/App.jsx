@@ -14,6 +14,7 @@ function Login({ onLogin }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,11 +37,16 @@ function Login({ onLogin }) {
       return;
     }
 
+    setCargando(true);
+    setError('');
+
     try {
       await authService.login(emailNormalizado, pass);
       onLogin();
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -59,6 +65,7 @@ function Login({ onLogin }) {
             value={user} 
             onChange={(e) => {setUser(e.target.value); setError('');}} 
             autoComplete="email"
+            disabled={cargando}
           />
           <input 
             type="password" 
@@ -68,8 +75,16 @@ function Login({ onLogin }) {
             value={pass} 
             onChange={(e) => {setPass(e.target.value); setError('');}} 
             autoComplete="current-password"
+            disabled={cargando}
           />
-          <button type="submit" className="btn-primary">Iniciar Sesión</button>
+          <button 
+            type="submit" 
+            className="btn-primary" 
+            disabled={cargando}
+            style={cargando ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+          >
+            {cargando ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
         </form>
         <p style={{marginTop: '20px', fontSize: '12px', color: '#666'}}>
           ¿Olvidó su contraseña? Contacte a soporte de Conducción.
