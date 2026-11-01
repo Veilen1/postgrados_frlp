@@ -17,13 +17,27 @@ export const AUTH_STORAGE_KEYS = {
 export const authService = {
   /**
    * Inicia sesión contra el endpoint POST /api/v1/auth/login.
+   * Envía las credenciales y devuelve los tokens generados por FastAPI.
+   * 
    * @param {string} email - Correo del usuario.
    * @param {string} password - Contraseña en texto plano.
-   * @returns {Promise<{ access_token: string, refresh_token: string, user: object }>}
+   * @returns {Promise<{ access_token: string, refresh_token: string, token_type: string, expires_in: number, user: object }>}
    */
   async login(email, password) {
-    // Se implementará en el próximo commit
-    throw new Error('login no implementado');
+    const payload = {
+      email: email?.trim(),
+      password,
+    };
+
+    const data = await apiClient('/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    return data;
   },
 
   /**
