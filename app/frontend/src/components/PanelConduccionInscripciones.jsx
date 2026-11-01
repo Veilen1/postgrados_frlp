@@ -15,12 +15,47 @@ const ESTADOS_RBAC = [
 ];
 
 /**
+ * Remueve tildes y normaliza a minúsculas para búsquedas flexibles en español.
+ */
+function normalizarTexto(texto) {
+  return (texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+/**
  * Helpers de formateo según directivas de INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md
  */
-function renderNumeroLegajo(numeroLegajo) {
+function renderNumeroLegajo(numeroLegajo, onClickLegajo) {
   if (!numeroLegajo) {
     return <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '13px' }}>Se asigna al aprobar</span>;
   }
+  
+  if (typeof onClickLegajo === 'function') {
+    return (
+      <button 
+        type="button"
+        className="font-mono"
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          color: '#0d6efd',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          fontWeight: '600',
+        }}
+        onClick={() => onClickLegajo(numeroLegajo)}
+        title="Ver expediente del estudiante"
+        aria-label={`Ver legajo ${numeroLegajo}`}
+      >
+        {numeroLegajo}
+      </button>
+    );
+  }
+
   return <span className="font-mono" style={{ fontWeight: '600' }}>{numeroLegajo}</span>;
 }
 
@@ -87,7 +122,7 @@ function renderBadgeEstado(estado) {
   );
 }
 
-export const PanelConduccionInscripciones = () => {
+export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
   // ---------------------------------------------------------------------------
@@ -132,15 +167,15 @@ export const PanelConduccionInscripciones = () => {
   }, [inscripciones]);
 
   // ---------------------------------------------------------------------------
-  // FILTRADO INTELIGENTE
+  // FILTRADO INTELIGENTE Y ACCESIBLE (Insensible a tildes)
   // ---------------------------------------------------------------------------
   const inscripcionesFiltradas = useMemo(() => {
-    const query = busqueda.trim().toLowerCase();
+    const query = normalizarTexto(busqueda);
 
     return inscripciones.filter((item) => {
-      const nombreCompleto = formatearNombreAlumno(item).toLowerCase();
-      const legajoTexto = (item.numero_legajo || '').toLowerCase();
-      const dniTexto = (item.dni || '').toLowerCase();
+      const nombreCompleto = normalizarTexto(formatearNombreAlumno(item));
+      const legajoTexto = normalizarTexto(item.numero_legajo);
+      const dniTexto = normalizarTexto(item.dni);
 
       const coincideTexto =
         query === '' ||
@@ -168,7 +203,7 @@ export const PanelConduccionInscripciones = () => {
     <div className="panel-container">
       <header className="panel-header">
         <h2>Gestión de Inscripciones - Conducción</h2>
-        <span className="badge-count">
+        <span className="badge-count" aria-live="polite">
           {cargando ? 'Cargando...' : `${inscripcionesFiltradas.length} resultados`}
         </span>
       </header>
@@ -250,7 +285,7 @@ export const PanelConduccionInscripciones = () => {
         </button>
       </div>
 
-      <div className="table-responsive">
+      <div className="table-responsive" aria-busy={cargando}>
         <table className="tabla-custom">
           <thead>
             <tr>
@@ -272,7 +307,7 @@ export const PanelConduccionInscripciones = () => {
             ) : inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
                 <tr key={row.id}>
-                  <td>{renderNumeroLegajo(row.numero_legajo)}</td>
+                  <td>{renderNumeroLegajo(row.numero_legajo, onIrAEstudiante)}</td>
                   <td className="font-semibold">{formatearNombreAlumno(row)}</td>
                   <td>{formatearPosgrado(row.cohorte)}</td>
                   <td>{formatearCohorte(row.cohorte)}</td>
