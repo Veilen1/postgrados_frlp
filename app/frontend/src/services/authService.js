@@ -55,7 +55,9 @@ export const authService = {
    * Cierra la sesión activa y elimina las credenciales locales.
    */
   logout() {
-    // Se implementará en el próximo commit
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
   },
 
   /**
@@ -63,7 +65,7 @@ export const authService = {
    * @returns {string | null}
    */
   getToken() {
-    return null;
+    return localStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
   },
 
   /**
@@ -71,7 +73,13 @@ export const authService = {
    * @returns {object | null}
    */
   getUser() {
-    return null;
+    const userRaw = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
+    if (!userRaw) return null;
+    try {
+      return JSON.parse(userRaw);
+    } catch {
+      return null;
+    }
   },
 
   /**
@@ -79,7 +87,7 @@ export const authService = {
    * @returns {boolean}
    */
   isAuthenticated() {
-    return false;
+    return Boolean(this.getToken());
   },
 
   /**
