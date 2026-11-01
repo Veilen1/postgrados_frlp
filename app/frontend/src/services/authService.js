@@ -92,9 +92,16 @@ export const authService = {
 
   /**
    * Devuelve los headers de autorización HTTP necesarios para peticiones protegidas.
+   * Inyecta Authorization: Bearer <token> si existe una sesión activa.
+   * 
    * @returns {Record<string, string>}
    */
   getAuthHeaders() {
-    return {};
+    const token = this.getToken();
+    if (!token) return {};
+
+    return {
+      Authorization: `Bearer ${token}`,
+    };
   },
 };
