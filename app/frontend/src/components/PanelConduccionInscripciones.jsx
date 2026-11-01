@@ -1,6 +1,46 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { legajoService } from '../services/legajoService';
 
+/**
+ * Helpers de formateo según directivas de INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md
+ */
+function renderNumeroLegajo(numeroLegajo) {
+  if (!numeroLegajo) {
+    return <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '13px' }}>Se asigna al aprobar</span>;
+  }
+  return <span className="font-mono" style={{ fontWeight: '600' }}>{numeroLegajo}</span>;
+}
+
+function formatearNombreAlumno(item) {
+  const nombreCompleto = `${item.nombre || ''} ${item.apellido || ''}`.trim();
+  return nombreCompleto || (item.dni ? `DNI ${item.dni}` : 'Sin registrar');
+}
+
+function formatearPosgrado(cohorte) {
+  return cohorte?.carrera || cohorte?.nombre || 'Posgrado no especificado';
+}
+
+function formatearCohorte(cohorte) {
+  if (cohorte?.nombre) return cohorte.nombre;
+  if (cohorte?.anio) return `Cohorte ${cohorte.anio}`;
+  return '-';
+}
+
+function formatearFecha(fechaIso) {
+  if (!fechaIso) return '-';
+  try {
+    const fecha = new Date(fechaIso);
+    if (isNaN(fecha.getTime())) return '-';
+    return fecha.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return '-';
+  }
+}
+
 export const PanelConduccionInscripciones = () => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
@@ -15,7 +55,6 @@ export const PanelConduccionInscripciones = () => {
 
   // ---------------------------------------------------------------------------
   // CARGA ASÍNCRONA DE DATOS (API REST)
-  // Consume GET /api/v1/legajos extrayendo data.items
   // ---------------------------------------------------------------------------
   useEffect(() => {
     let activo = true;
@@ -54,15 +93,17 @@ export const PanelConduccionInscripciones = () => {
     const query = busqueda.trim().toLowerCase();
 
     return inscripciones.filter((item) => {
-      const nombreCompleto = `${item.nombre || ''} ${item.apellido || ''}`.trim().toLowerCase();
+      const nombreCompleto = formatearNombreAlumno(item).toLowerCase();
       const legajoTexto = (item.numero_legajo || '').toLowerCase();
+      const dniTexto = (item.dni || '').toLowerCase();
 
       const coincideTexto =
         query === '' ||
         nombreCompleto.includes(query) ||
-        legajoTexto.includes(query);
+        legajoTexto.includes(query) ||
+        dniTexto.includes(query);
 
-      const posgradoNombre = item.cohorte?.carrera || item.cohorte?.nombre || item.posgrado || '';
+      const posgradoNombre = formatearPosgrado(item.cohorte);
       const coincidePosgrado = filtroPosgrado === 'Todos' || posgradoNombre === filtroPosgrado;
 
       const coincideEstado = filtroEstado === 'Todos' || item.estado === filtroEstado;
@@ -90,10 +131,10 @@ export const PanelConduccionInscripciones = () => {
         <input
           type="text"
           className="input-search"
-          placeholder="Buscar por alumno o legajo..."
+          placeholder="Buscar por alumno, DNI o legajo..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          aria-label="Buscar alumno o legajo"
+          aria-label="Buscar por alumno, DNI o legajo"
         />
         <select 
           className="select-filter"
@@ -145,11 +186,11 @@ export const PanelConduccionInscripciones = () => {
             {inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
                 <tr key={row.id}>
-                  <td className="font-mono">{row.numero_legajo || 'Sin asignar'}</td>
-                  <td className="font-semibold">{`${row.nombre || ''} ${row.apellido || ''}`.trim() || 'Sin nombre'}</td>
-                  <td>{row.cohorte?.carrera || row.cohorte?.nombre || '-'}</td>
-                  <td>{row.cohorte?.nombre || row.cohorte?.anio || '-'}</td>
-                  <td>{row.fecha_inscripcion ? new Date(row.fecha_inscripcion).toLocaleDateString('es-AR') : '-'}</td>
+                  <td>{renderNumeroLegajo(row.numero_legajo)}</td>
+                  <td className="font-semibold">{formatearNombreAlumno(row)}</td>
+                  <td>{formatearPosgrado(row.cohorte)}</td>
+                  <td>{formatearCohorte(row.cohorte)}</td>
+                  <td>{formatearFecha(row.fecha_inscripcion || row.created_at)}</td>
                   <td>
                     <span className={`badge badge-${(row.estado || '').toLowerCase()}`}>
                       {row.estado}
