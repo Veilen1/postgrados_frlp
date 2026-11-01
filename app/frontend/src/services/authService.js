@@ -17,7 +17,7 @@ export const AUTH_STORAGE_KEYS = {
 export const authService = {
   /**
    * Inicia sesión contra el endpoint POST /api/v1/auth/login.
-   * Envía las credenciales y devuelve los tokens generados por FastAPI.
+   * Envía las credenciales y persiste los tokens y el usuario en localStorage.
    * 
    * @param {string} email - Correo del usuario.
    * @param {string} password - Contraseña en texto plano.
@@ -36,6 +36,17 @@ export const authService = {
       },
       body: JSON.stringify(payload),
     });
+
+    // Persistencia segura en localStorage tras login exitoso
+    if (data?.access_token) {
+      localStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
+    }
+    if (data?.refresh_token) {
+      localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+    }
+    if (data?.user) {
+      localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(data.user));
+    }
 
     return data;
   },
