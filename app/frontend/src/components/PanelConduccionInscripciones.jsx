@@ -2,6 +2,19 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { legajoService } from '../services/legajoService';
 
 /**
+ * Estados oficiales del modelo RBAC de FastAPI (LegajoEstado)
+ */
+const ESTADOS_RBAC = [
+  { value: 'BORRADOR', label: 'Borrador' },
+  { value: 'PENDIENTE', label: 'Pendiente' },
+  { value: 'ENVIADO', label: 'Enviado' },
+  { value: 'EN_REVISION', label: 'En Revisión' },
+  { value: 'OBSERVADO', label: 'Observado' },
+  { value: 'APROBADO', label: 'Aprobado' },
+  { value: 'RECHAZADO', label: 'Rechazado' },
+];
+
+/**
  * Helpers de formateo según directivas de INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md
  */
 function renderNumeroLegajo(numeroLegajo) {
@@ -41,6 +54,39 @@ function formatearFecha(fechaIso) {
   }
 }
 
+function renderBadgeEstado(estado) {
+  const estadoStr = String(estado || 'BORRADOR').toUpperCase();
+
+  const clasesPorEstado = {
+    APROBADO: 'badge-aprobada',
+    ENVIADO: 'badge-pendiente',
+    EN_REVISION: 'badge-pendiente',
+    PENDIENTE: 'badge-pendiente',
+    OBSERVADO: 'badge-rechazada',
+    RECHAZADO: 'badge-rechazada',
+    BORRADOR: 'badge-pendiente',
+  };
+
+  const labelsPorEstado = {
+    BORRADOR: 'Borrador',
+    PENDIENTE: 'Pendiente',
+    ENVIADO: 'Enviado',
+    EN_REVISION: 'En Revisión',
+    OBSERVADO: 'Observado',
+    APROBADO: 'Aprobado',
+    RECHAZADO: 'Rechazado',
+  };
+
+  const claseCss = clasesPorEstado[estadoStr] || 'badge-pendiente';
+  const label = labelsPorEstado[estadoStr] || estadoStr;
+
+  return (
+    <span className={`badge ${claseCss}`}>
+      {label}
+    </span>
+  );
+}
+
 export const PanelConduccionInscripciones = () => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
@@ -65,7 +111,6 @@ export const PanelConduccionInscripciones = () => {
         setError(null);
         const data = await legajoService.obtenerLegajos({ pageSize: 100 });
         if (activo) {
-          // Contrato de FastAPI: la lista de legajos viene dentro de data.items
           setInscripciones(Array.isArray(data?.items) ? data.items : []);
         }
       } catch (err) {
@@ -85,6 +130,18 @@ export const PanelConduccionInscripciones = () => {
       activo = false;
     };
   }, []);
+
+  // Extrae la lista única de posgrados devueltos por el backend para el filtro
+  const opcionesPosgrados = useMemo(() => {
+    const conjunto = new Set();
+    inscripciones.forEach((item) => {
+      const pos = formatearPosgrado(item.cohorte);
+      if (pos && pos !== 'Posgrado no especificado') {
+        conjunto.add(pos);
+      }
+    });
+    return Array.from(conjunto);
+  }, [inscripciones]);
 
   // ---------------------------------------------------------------------------
   // FILTRADO INTELIGENTE
@@ -106,7 +163,7 @@ export const PanelConduccionInscripciones = () => {
       const posgradoNombre = formatearPosgrado(item.cohorte);
       const coincidePosgrado = filtroPosgrado === 'Todos' || posgradoNombre === filtroPosgrado;
 
-      const coincideEstado = filtroEstado === 'Todos' || item.estado === filtroEstado;
+      const coincideEstado = filtroEstado === 'Todos' || String(item.estado).toUpperCase() === filtroEstado;
 
       return coincideTexto && coincidePosgrado && coincideEstado;
     });
@@ -136,6 +193,8 @@ export const PanelConduccionInscripciones = () => {
           onChange={(e) => setBusqueda(e.target.value)}
           aria-label="Buscar por alumno, DNI o legajo"
         />
+        
+        {/* Filtro dinámico de Posgrados según datos reales del backend */}
         <select 
           className="select-filter"
           value={filtroPosgrado} 
@@ -143,11 +202,12 @@ export const PanelConduccionInscripciones = () => {
           aria-label="Filtrar por posgrado"
         >
           <option value="Todos">Todos los Posgrados</option>
-          <option value="Maestría en Ciencia de Datos">Maestría en Ciencia de Datos</option>
-          <option value="Especialización en Software">Especialización en Software</option>
-          <option value="Doctorado en Informática">Doctorado en Informática</option>
+          {opcionesPosgrados.map((posgrado) => (
+            <option key={posgrado} value={posgrado}>{posgrado}</option>
+          ))}
         </select>
 
+        {/* Filtro con estados oficiales RBAC en mayúsculas */}
         <select 
           className="select-filter"
           value={filtroEstado} 
@@ -155,9 +215,9 @@ export const PanelConduccionInscripciones = () => {
           aria-label="Filtrar por estado"
         >
           <option value="Todos">Todos los Estados</option>
-          <option value="Aprobada">Aprobadas</option>
-          <option value="Pendiente">Pendientes</option>
-          <option value="Rechazada">Rechazadas</option>
+          {ESTADOS_RBAC.map((est) => (
+            <option key={est.value} value={est.value}>{est.label}</option>
+          ))}
         </select>
 
         <button 
@@ -191,11 +251,7 @@ export const PanelConduccionInscripciones = () => {
                   <td>{formatearPosgrado(row.cohorte)}</td>
                   <td>{formatearCohorte(row.cohorte)}</td>
                   <td>{formatearFecha(row.fecha_inscripcion || row.created_at)}</td>
-                  <td>
-                    <span className={`badge badge-${(row.estado || '').toLowerCase()}`}>
-                      {row.estado}
-                    </span>
-                  </td>
+                  <td>{renderBadgeEstado(row.estado)}</td>
                 </tr>
               ))
             ) : (
