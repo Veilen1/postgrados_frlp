@@ -16,6 +16,25 @@ function Login({ onLogin }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const emailNormalizado = user.trim();
+
+    // Validaciones previas al envío
+    if (!emailNormalizado) {
+      setError('El correo electrónico es requerido');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailNormalizado)) {
+      setError('Ingrese un formato de correo electrónico válido');
+      return;
+    }
+
+    if (!pass) {
+      setError('La contraseña es requerida');
+      return;
+    }
+
     if (user === 'admin' && pass === 'admin') {
       onLogin(); 
     } else {
@@ -28,10 +47,26 @@ function Login({ onLogin }) {
       <div className="login-card">
         <h1>UTN FRLP</h1>
         <h2>Sistema de Posgrado</h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {error && <p style={{color: '#dc3545', fontWeight: 'bold', marginBottom: '15px'}}>{error}</p>}
-          <input type="text" placeholder="Usuario / Legajo" className="form-control" style={{marginBottom: '15px'}} value={user} onChange={(e) => {setUser(e.target.value); setError('');}} />
-          <input type="password" placeholder="Contraseña" className="form-control" style={{marginBottom: '25px'}} value={pass} onChange={(e) => {setPass(e.target.value); setError('');}} />
+          <input 
+            type="email" 
+            placeholder="Correo institucional (ej: admin@posgrado.frlp.utn.edu.ar)" 
+            className="form-control" 
+            style={{marginBottom: '15px'}} 
+            value={user} 
+            onChange={(e) => {setUser(e.target.value); setError('');}} 
+            autoComplete="email"
+          />
+          <input 
+            type="password" 
+            placeholder="Contraseña" 
+            className="form-control" 
+            style={{marginBottom: '25px'}} 
+            value={pass} 
+            onChange={(e) => {setPass(e.target.value); setError('');}} 
+            autoComplete="current-password"
+          />
           <button type="submit" className="btn-primary">Iniciar Sesión</button>
         </form>
         <p style={{marginTop: '20px', fontSize: '12px', color: '#666'}}>
