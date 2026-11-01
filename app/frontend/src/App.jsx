@@ -44,7 +44,14 @@ function Login({ onLogin }) {
       await authService.login(emailNormalizado, pass);
       onLogin();
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      // Manejo descriptivo según el tipo de fallo de la API o de red
+      if (err.status === 401) {
+        setError('Credenciales inválidas. Verifique su correo institucional y contraseña.');
+      } else if (err.name === 'TypeError' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setError('No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.');
+      } else {
+        setError(err.message || 'Error inesperado al iniciar sesión.');
+      }
     } finally {
       setCargando(false);
     }
@@ -56,7 +63,24 @@ function Login({ onLogin }) {
         <h1>UTN FRLP</h1>
         <h2>Sistema de Posgrado</h2>
         <form onSubmit={handleSubmit} noValidate>
-          {error && <p style={{color: '#dc3545', fontWeight: 'bold', marginBottom: '15px'}}>{error}</p>}
+          {error && (
+            <div 
+              role="alert" 
+              style={{
+                backgroundColor: '#f8d7da',
+                color: '#842029',
+                border: '1px solid #f5c2c7',
+                borderRadius: '4px',
+                padding: '10px 14px',
+                fontSize: '13px',
+                marginBottom: '18px',
+                textAlign: 'left',
+                lineHeight: '1.4',
+              }}
+            >
+              {error}
+            </div>
+          )}
           <input 
             type="email" 
             placeholder="Correo institucional (ej: admin@posgrado.frlp.utn.edu.ar)" 
