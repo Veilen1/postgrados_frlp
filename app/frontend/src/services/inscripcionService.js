@@ -4,10 +4,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 /**
  * Helper base para peticiones HTTP
- * Realiza el fetch y extrae los mensajes de error de FastAPI (detail y message)
+ * Inyecta el token JWT Bearer si existe sesión activa y parsea errores de FastAPI
  */
 async function request(url, options = {}) {
-  const response = await fetch(url, options);
+  const token = localStorage.getItem('access_token');
+  const headers = {
+    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
