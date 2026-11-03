@@ -4,12 +4,23 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 /**
  * Helper base para peticiones HTTP
- * Realiza el fetch y extrae los mensajes de error de FastAPI (detail y message)
+ * Inyecta el token JWT Bearer si existe sesión activa y parsea errores de FastAPI
  */
 async function request(url, options = {}) {
-  const response = await fetch(url, options);
+  const token = localStorage.getItem('access_token');
+  const headers = {
+    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
+    // Si la sesión expiró o las credenciales no son válidas (401), mensaje amigable de UX
+    if (response.status === 401) {
+      throw new Error('Tu sesión ha expirado o no has iniciado sesión. Por favor, iniciá sesión nuevamente para continuar.');
+    }
+
     const errorBody = await response.json().catch(() => null);
     let mensaje = `Error del servidor (${response.status})`;
 
@@ -44,6 +55,12 @@ export const inscripcionService = {
    * Endpoint: POST /api/v1/legajos
    */
   crearPreinscripcion: async (datosAspirante) => {
+    // Validación temprana de sesión antes de enviar
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('Tu sesión ha expirado o no has iniciado sesión. Por favor, iniciá sesión nuevamente para continuar.');
+    }
+
     let cohorteId = datosAspirante.cohorte_id;
     if (!cohorteId) {
       try {
