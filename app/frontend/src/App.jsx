@@ -7,19 +7,53 @@ import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.js
 import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
 import VistaPostgrados from './components/VistaPostgrados.jsx';
 import { VistaEstadisticas } from './components/VistaEstadisticas.jsx';
+import { authService } from './services/authService';
 
 // --- LOGIN ---
 function Login({ onLogin }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (user === 'admin' && pass === 'admin') {
-      onLogin(); 
-    } else {
-      setError('Usuario o contraseña incorrectos');
+    const emailNormalizado = user.trim();
+
+    // Validaciones previas al envío
+    if (!emailNormalizado) {
+      setError('El correo electrónico es requerido');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailNormalizado)) {
+      setError('Ingrese un formato de correo electrónico válido');
+      return;
+    }
+
+    if (!pass) {
+      setError('La contraseña es requerida');
+      return;
+    }
+
+    setCargando(true);
+    setError('');
+
+    try {
+      await authService.login(emailNormalizado, pass);
+      onLogin();
+    } catch (err) {
+      // Manejo descriptivo según el tipo de fallo de la API o de red
+      if (err.status === 401) {
+        setError('Credenciales inválidas. Verifique su correo institucional y contraseña.');
+      } else if (err.name === 'TypeError' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setError('No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.');
+      } else {
+        setError(err.message || 'Error inesperado al iniciar sesión.');
+      }
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -28,11 +62,53 @@ function Login({ onLogin }) {
       <div className="login-card">
         <h1>UTN FRLP</h1>
         <h2>Sistema de Posgrado</h2>
-        <form onSubmit={handleSubmit}>
-          {error && <p style={{color: '#dc3545', fontWeight: 'bold', marginBottom: '15px'}}>{error}</p>}
-          <input type="text" placeholder="Usuario / Legajo" className="form-control" style={{marginBottom: '15px'}} value={user} onChange={(e) => {setUser(e.target.value); setError('');}} />
-          <input type="password" placeholder="Contraseña" className="form-control" style={{marginBottom: '25px'}} value={pass} onChange={(e) => {setPass(e.target.value); setError('');}} />
-          <button type="submit" className="btn-primary">Iniciar Sesión</button>
+        <form onSubmit={handleSubmit} noValidate>
+          {error && (
+            <div 
+              role="alert" 
+              style={{
+                backgroundColor: '#f8d7da',
+                color: '#842029',
+                border: '1px solid #f5c2c7',
+                borderRadius: '4px',
+                padding: '10px 14px',
+                fontSize: '13px',
+                marginBottom: '18px',
+                textAlign: 'left',
+                lineHeight: '1.4',
+              }}
+            >
+              {error}
+            </div>
+          )}
+          <input 
+            type="email" 
+            placeholder="Correo institucional (ej: admin@posgrado.frlp.utn.edu.ar)" 
+            className="form-control" 
+            style={{marginBottom: '15px'}} 
+            value={user} 
+            onChange={(e) => {setUser(e.target.value); setError('');}} 
+            autoComplete="email"
+            disabled={cargando}
+          />
+          <input 
+            type="password" 
+            placeholder="Contraseña" 
+            className="form-control" 
+            style={{marginBottom: '25px'}} 
+            value={pass} 
+            onChange={(e) => {setPass(e.target.value); setError('');}} 
+            autoComplete="current-password"
+            disabled={cargando}
+          />
+          <button 
+            type="submit" 
+            className="btn-primary" 
+            disabled={cargando}
+            style={cargando ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+          >
+            {cargando ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
         </form>
         <p style={{marginTop: '20px', fontSize: '12px', color: '#666'}}>
           ¿Olvidó su contraseña? Contacte a soporte de Conducción.
@@ -44,9 +120,16 @@ function Login({ onLogin }) {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Persistencia de sesión: verifica si ya existe token en el storage al cargar
+  const [isLoggedIn, setIsLoggedIn] = useState(() => authService.isAuthenticated());
   const [vista, setVista] = useState('inscripciones');
   const [legajoBuscado, setLegajoBuscado] = useState(null);
+
+  // Cierre de sesión limpio: elimina tokens y actualiza vista
+  const handleLogout = () => {
+    authService.logout();
+    setIsLoggedIn(false);
+  };
 
   if (!isLoggedIn) {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
@@ -59,7 +142,7 @@ export default function App() {
           <button className="active" onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
           <button onClick={() => setVista('docente')}>Docente</button>
           <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
         </nav>
         <Preinscripcion />
       </>
@@ -73,7 +156,7 @@ export default function App() {
           <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
           <button className="active" onClick={() => setVista('docente')}>Docente</button>
           <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
         </nav>
         <PanelDocente />
       </>
@@ -91,7 +174,7 @@ export default function App() {
         <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
         <button onClick={() => setVista('docente')}>Docente</button>
         <button className="active" onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-        <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={() => setIsLoggedIn(false)}>Cerrar Sesión</button>
+        <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
       </nav>
       
       <div className="conduccion-layout">
