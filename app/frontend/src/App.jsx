@@ -3,7 +3,6 @@ import './App.css';
 
 import Preinscripcion from './components/preinscripcion.jsx';
 import PanelDocente from './components/panelDocente.jsx';
-import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.jsx';
 import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
 import VistaPostgrados from './components/VistaPostgrados.jsx';
 import { VistaEstadisticas } from './components/VistaEstadisticas.jsx';
@@ -44,7 +43,6 @@ function Login({ onLogin }) {
       await authService.login(emailNormalizado, pass);
       onLogin();
     } catch (err) {
-      // Manejo descriptivo según el tipo de fallo de la API o de red
       if (err.status === 401) {
         setError('Credenciales inválidas. Verifique su correo institucional y contraseña.');
       } else if (err.name === 'TypeError' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
@@ -120,12 +118,19 @@ function Login({ onLogin }) {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function App() {
-  // Persistencia de sesión: verifica si ya existe token en el storage al cargar
   const [isLoggedIn, setIsLoggedIn] = useState(() => authService.isAuthenticated());
-  const [vista, setVista] = useState('inscripciones');
-  const [legajoBuscado, setLegajoBuscado] = useState(null);
 
-  // Cierre de sesión limpio: elimina tokens y actualiza vista
+  // Control de acceso según RBAC: sólo ADMIN_POSGRADO y SUPERADMIN acceden a conducción
+  const usuarioActivo = authService.getUser();
+  const tienePermisoConduccion = ['ADMIN_POSGRADO', 'SUPERADMIN'].includes(usuarioActivo?.rol);
+
+  // Vista inicial inteligente: si no es admin, abrir preinscripción o docente según rol
+  const vistaInicial = tienePermisoConduccion 
+    ? 'inscripciones' 
+    : (usuarioActivo?.rol === 'DOCENTE' ? 'docente' : 'preinscripcion');
+
+  const [vista, setVista] = useState(vistaInicial);
+
   const handleLogout = () => {
     authService.logout();
     setIsLoggedIn(false);
@@ -135,15 +140,36 @@ export default function App() {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
   }
 
+  // Barra de navegación con control de permisos RBAC
+  const renderNav = () => (
+    <nav className="demo-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px' }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button className={vista === 'preinscripcion' ? 'active' : ''} onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
+        <button className={vista === 'docente' ? 'active' : ''} onClick={() => setVista('docente')}>Docente</button>
+        {tienePermisoConduccion && (
+          <button 
+            className={['inscripciones', 'posgrados', 'estadisticas'].includes(vista) ? 'active' : ''} 
+            onClick={() => setVista('inscripciones')}
+          >
+            Equipo de Conducción
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        {usuarioActivo && (
+          <span style={{ fontSize: '13px', color: '#fff', opacity: 0.9 }}>
+            👤 {usuarioActivo.nombre} {usuarioActivo.apellido} <strong>({usuarioActivo.rol})</strong>
+          </span>
+        )}
+        <button style={{ background: '#dc3545', margin: 0 }} onClick={handleLogout}>Cerrar Sesión</button>
+      </div>
+    </nav>
+  );
+
   if (vista === 'preinscripcion') {
     return (
       <>
-        <nav className="demo-nav">
-          <button className="active" onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
-          <button onClick={() => setVista('docente')}>Docente</button>
-          <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
-        </nav>
+        {renderNav()}
         <Preinscripcion />
       </>
     );
@@ -152,45 +178,46 @@ export default function App() {
   if (vista === 'docente') {
     return (
       <>
-        <nav className="demo-nav">
-          <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
-          <button className="active" onClick={() => setVista('docente')}>Docente</button>
-          <button onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-          <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
-        </nav>
+        {renderNav()}
         <PanelDocente />
       </>
     );
   }
 
-  const handleIrAEstudiante = (legajo) => {
-    setLegajoBuscado(legajo);
-    setVista('estudiante');
-  };
+  // Si intenta acceder al panel de conducción sin los permisos requeridos
+  if (!tienePermisoConduccion) {
+    return (
+      <>
+        {renderNav()}
+        <div style={{ padding: '40px 20px', maxWidth: '600px', margin: '40px auto', textAlign: 'center', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ color: '#dc3545', marginBottom: '15px' }}>⛔ Acceso Restringido</h2>
+          <p style={{ color: '#495057', fontSize: '14px', lineHeight: '1.6' }}>
+            Su usuario actual <strong>({usuarioActivo?.email || 'Sin usuario'})</strong> con rol <strong>{usuarioActivo?.rol || 'DESCONOCIDO'}</strong> no cuenta con permisos de administración para visualizar el Panel de Equipo de Conducción.
+          </p>
+          <p style={{ color: '#6c757d', fontSize: '13px' }}>
+            Se requiere el rol <code>ADMIN_POSGRADO</code> o <code>SUPERADMIN</code>.
+          </p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
-      <nav className="demo-nav">
-        <button onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
-        <button onClick={() => setVista('docente')}>Docente</button>
-        <button className="active" onClick={() => setVista('inscripciones')}>Equipo de Conducción</button>
-        <button style={{background: '#dc3545', marginLeft: '20px'}} onClick={handleLogout}>Cerrar Sesión</button>
-      </nav>
+      {renderNav()}
       
       <div className="conduccion-layout">
         <aside className="sidebar">
           <div className="sidebar-logo">UTN</div>
           <ul>
             <li className={vista === 'inscripciones' ? 'active' : ''} onClick={() => setVista('inscripciones')}><span className="sidebar-icon">📋</span> Inscripciones</li>
-            <li className={vista === 'estudiante' ? 'active' : ''} onClick={() => setVista('estudiante')}><span className="sidebar-icon">👥</span> Estudiantes</li>
             <li className={vista === 'posgrados' ? 'active' : ''} onClick={() => setVista('posgrados')}><span className="sidebar-icon">🎓</span> Posgrados</li>
             <li className={vista === 'estadisticas' ? 'active' : ''} onClick={() => setVista('estadisticas')}><span className="sidebar-icon">📊</span> Estadisticas</li>
           </ul>
         </aside>
         <main className="main-content">
            <div className="panel-header">Panel de Equipo de conducción</div>
-           {vista === 'estudiante' && <PanelConduccionEstudiante legajoInicial={legajoBuscado} />}
-           {vista === 'inscripciones' && <PanelConduccionInscripciones onIrAEstudiante={handleIrAEstudiante} />}
+           {vista === 'inscripciones' && <PanelConduccionInscripciones />}
            {vista === 'posgrados' && <VistaPostgrados />}
            {vista === 'estadisticas' && <VistaEstadisticas />}
         </main>
