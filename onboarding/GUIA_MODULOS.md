@@ -370,10 +370,8 @@ export function TendenciaInscripciones() {
 
 ### "¿Cómo pruebo el envío de emails en desarrollo?"
 
-Usá **MailHog** (ya incluido en el docker-compose):
-1. El sistema envía emails normalmente a `smtp://mailhog:1025`
-2. Los emails NO llegan a ninguna bandeja real
-3. Los podés ver en `http://localhost:8025`
+MailHog todavía no forma parte del `docker-compose.yml` actual. La integración SMTP y su
+servidor de prueba se incorporarán cuando se implemente el envío de notificaciones del Core.
 
 ---
 

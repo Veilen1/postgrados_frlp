@@ -140,7 +140,7 @@ Entonces [resultado esperado]
 ```
 
 **Criterios de Aceptación:**
-1. **Dado** un legajo en estado "Pendiente", **cuando** el coordinador lo aprueba, **entonces** se genera automáticamente número de legajo único (formato: AÑO-COHORTE-SECUENCIAL, ej: 26-001-045).
+1. **Dado** un legajo en estado "En Revisión", **cuando** el coordinador lo aprueba, **entonces** se genera automáticamente un número único y descriptivo (formato `YY-CCCC-CC-NNN`, ej. `26-MISI-01-045`) y se muestra junto al nombre completo de la carrera y cohorte.
 2. **Dado** un cambio de estado a "Observado", **cuando** el coordinador guarda, **entonces** el sistema envía email automático al aspirante con el texto de la observación.
 3. **Dado** un legajo "Completado", **cuando** pasa 30 días sin pasar a "Activo", **entonces** el sistema alerta al coordinador por vencimiento de reserva de vacante.
 
@@ -339,7 +339,7 @@ Response: 200 OK
   "data": [
     {
       "legajo_id": "uuid",
-      "numero_legajo": "26-001-012",
+      "numero_legajo": "26-MISI-01-012",
       "apellido_nombre": "Gonzalez, Maria",
       "email": "m.gonzalez@example.com",
       "carrera_grado": "Ing. Sistemas",

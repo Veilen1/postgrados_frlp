@@ -1,46 +1,173 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { legajoService } from '../services/legajoService';
 
 /**
- * Datos simulados (Mock Data) fuera del componente para evitar recargar la memoria en cada actualización.
+ * Estados oficiales del modelo RBAC de FastAPI (LegajoEstado)
  */
-const MOCK_INSCRIPCIONES = [
-  { id: 1, alumno: 'María González', legajo: 'POS-2024-01', posgrado: 'Maestría en Ciencia de Datos', cohorte: '2024-1', estado: 'Aprobada', fecha: '2024-03-15' },
-  { id: 2, alumno: 'Lucas Benítez', legajo: 'POS-2024-02', posgrado: 'Especialización en Software', cohorte: '2024-1', estado: 'Pendiente', fecha: '2024-03-18' },
-  { id: 3, alumno: 'Carla Ruiz', legajo: 'POS-2023-89', posgrado: 'Doctorado en Informática', cohorte: '2023-2', estado: 'Rechazada', fecha: '2024-03-10' },
-  { id: 4, alumno: 'Javier Martínez', legajo: 'POS-2024-05', posgrado: 'Maestría en Ciencia de Datos', cohorte: '2024-1', estado: 'Aprobada', fecha: '2024-03-20' },
-  { id: 5, alumno: 'Sofía Rossi', legajo: 'POS-2024-12', posgrado: 'Especialización en Software', cohorte: '2024-1', estado: 'Pendiente', fecha: '2024-03-21' },
+const ESTADOS_RBAC = [
+  { value: 'BORRADOR', label: 'Borrador' },
+  { value: 'PENDIENTE', label: 'Pendiente' },
+  { value: 'ENVIADO', label: 'Enviado' },
+  { value: 'EN_REVISION', label: 'En Revisión' },
+  { value: 'OBSERVADO', label: 'Observado' },
+  { value: 'APROBADO', label: 'Aprobado' },
+  { value: 'RECHAZADO', label: 'Rechazado' },
 ];
+
+/**
+ * Remueve tildes y normaliza a minúsculas para búsquedas flexibles en español.
+ */
+function normalizarTexto(texto) {
+  return (texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+/**
+ * Helpers de formateo según directivas de INTEGRACION_FRONTEND_LEGAJO_DESCRIPTIVO.md.
+ * Renderiza el número de legajo como texto plano sin redirección a vistas mock pendientes.
+ */
+function renderNumeroLegajo(numeroLegajo) {
+  if (!numeroLegajo) {
+    return <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '13px' }}>Se asigna al aprobar</span>;
+  }
+  return <span className="font-mono" style={{ fontWeight: '600' }}>{numeroLegajo}</span>;
+}
+
+function formatearNombreAlumno(item) {
+  const nombreCompleto = `${item.nombre || ''} ${item.apellido || ''}`.trim();
+  return nombreCompleto || (item.dni ? `DNI ${item.dni}` : 'Sin registrar');
+}
+
+function formatearPosgrado(cohorte) {
+  return cohorte?.carrera || cohorte?.nombre || 'Posgrado no especificado';
+}
+
+function formatearCohorte(cohorte) {
+  if (cohorte?.nombre) return cohorte.nombre;
+  if (cohorte?.anio) return `Cohorte ${cohorte.anio}`;
+  return '-';
+}
+
+function formatearFecha(fechaIso) {
+  if (!fechaIso) return '-';
+  try {
+    const fecha = new Date(fechaIso);
+    if (isNaN(fecha.getTime())) return '-';
+    return fecha.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return '-';
+  }
+}
+
+function renderBadgeEstado(estado) {
+  const estadoStr = String(estado || 'BORRADOR').toUpperCase();
+
+  const clasesPorEstado = {
+    APROBADO: 'badge-aprobada',
+    ENVIADO: 'badge-pendiente',
+    EN_REVISION: 'badge-pendiente',
+    PENDIENTE: 'badge-pendiente',
+    OBSERVADO: 'badge-rechazada',
+    RECHAZADO: 'badge-rechazada',
+    BORRADOR: 'badge-pendiente',
+  };
+
+  const labelsPorEstado = {
+    BORRADOR: 'Borrador',
+    PENDIENTE: 'Pendiente',
+    ENVIADO: 'Enviado',
+    EN_REVISION: 'En Revisión',
+    OBSERVADO: 'Observado',
+    APROBADO: 'Aprobado',
+    RECHAZADO: 'Rechazado',
+  };
+
+  const claseCss = clasesPorEstado[estadoStr] || 'badge-pendiente';
+  const label = labelsPorEstado[estadoStr] || estadoStr;
+
+  return (
+    <span className={`badge ${claseCss}`}>
+      {label}
+    </span>
+  );
+}
 
 export const PanelConduccionInscripciones = () => {
   // ---------------------------------------------------------------------------
   // ESTADOS (State Management)
   // ---------------------------------------------------------------------------
+  const [inscripciones, setInscripciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+
   const [busqueda, setBusqueda] = useState('');
   const [filtroPosgrado, setFiltroPosgrado] = useState('Todos');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
 
-// ---------------------------------------------------------------------------
-// FILTRADO INTELIGENTE (Para que la app vaya más rápido)
-// useMemo guarda el resultado de la búsqueda y solo vuelve a buscar 
-// si cambias los filtros (como el texto o las opciones seleccionadas).
-// ---------------------------------------------------------------------------
-  const inscripcionesFiltradas = useMemo(() => {
-    const query = busqueda.trim().toLowerCase();
+  // ---------------------------------------------------------------------------
+  // FUNCIÓN DE CARGA ASÍNCRONA (Reutilizable para reintentos)
+  // ---------------------------------------------------------------------------
+  const cargarLegajos = useCallback(async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      const data = await legajoService.obtenerLegajos({ pageSize: 100 });
+      setInscripciones(Array.isArray(data?.items) ? data.items : []);
+    } catch (err) {
+      setError(err.message || 'Error al conectar con el servicio de legajos.');
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
-    return MOCK_INSCRIPCIONES.filter((item) => {
-      // Búsqueda flexible por nombre de alumno o número de legajo (encuentra coincidencias aunque haya pequeños errores al escribir)
+  useEffect(() => {
+    cargarLegajos();
+  }, [cargarLegajos]);
+
+  // Extrae la lista única de posgrados devueltos por el backend para el filtro
+  const opcionesPosgrados = useMemo(() => {
+    const conjunto = new Set();
+    inscripciones.forEach((item) => {
+      const pos = formatearPosgrado(item.cohorte);
+      if (pos && pos !== 'Posgrado no especificado') {
+        conjunto.add(pos);
+      }
+    });
+    return Array.from(conjunto);
+  }, [inscripciones]);
+
+  // ---------------------------------------------------------------------------
+  // FILTRADO INTELIGENTE Y ACCESIBLE (Insensible a tildes)
+  // ---------------------------------------------------------------------------
+  const inscripcionesFiltradas = useMemo(() => {
+    const query = normalizarTexto(busqueda);
+
+    return inscripciones.filter((item) => {
+      const nombreCompleto = normalizarTexto(formatearNombreAlumno(item));
+      const legajoTexto = normalizarTexto(item.numero_legajo);
+      const dniTexto = normalizarTexto(item.dni);
+
       const coincideTexto =
         query === '' ||
-        item.alumno.toLowerCase().includes(query) ||
-        item.legajo.toLowerCase().includes(query);
+        nombreCompleto.includes(query) ||
+        legajoTexto.includes(query) ||
+        dniTexto.includes(query);
 
-      // Filtros categóricos por valor exacto
-      const coincidePosgrado = filtroPosgrado === 'Todos' || item.posgrado === filtroPosgrado;
-      const coincideEstado = filtroEstado === 'Todos' || item.estado === filtroEstado;
+      const posgradoNombre = formatearPosgrado(item.cohorte);
+      const coincidePosgrado = filtroPosgrado === 'Todos' || posgradoNombre === filtroPosgrado;
+
+      const coincideEstado = filtroEstado === 'Todos' || String(item.estado).toUpperCase() === filtroEstado;
 
       return coincideTexto && coincidePosgrado && coincideEstado;
     });
-  }, [busqueda, filtroPosgrado, filtroEstado]);
+  }, [inscripciones, busqueda, filtroPosgrado, filtroEstado]);
 
   // Handler para limpiar los filtros con un solo click
   const handleLimpiarFiltros = () => {
@@ -53,54 +180,89 @@ export const PanelConduccionInscripciones = () => {
     <div className="panel-container">
       <header className="panel-header">
         <h2>Gestión de Inscripciones - Conducción</h2>
-        <span className="badge-count">
-          {inscripcionesFiltradas.length} resultados
+        <span className="badge-count" aria-live="polite">
+          {cargando ? 'Cargando...' : `${inscripcionesFiltradas.length} resultados`}
         </span>
       </header>
+
+      {/* Banner de error con botón de reintento */}
+      {error && (
+        <div 
+          role="alert" 
+          style={{
+            backgroundColor: '#f8d7da',
+            color: '#842029',
+            border: '1px solid #f5c2c7',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            marginBottom: '15px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span><strong>Aviso:</strong> {error}</span>
+          <button 
+            type="button" 
+            className="btn-primary" 
+            style={{ padding: '6px 14px', fontSize: '13px' }}
+            onClick={cargarLegajos}
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <div className="filtros-bar" role="search" aria-label="Filtros de inscripciones">
         <input
           type="text"
           className="input-search"
-          placeholder="Buscar por alumno o legajo..."
+          placeholder="Buscar por alumno, DNI o legajo..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          aria-label="Buscar alumno o legajo"
+          aria-label="Buscar por alumno, DNI o legajo"
+          disabled={cargando}
         />
+        
+        {/* Filtro dinámico de Posgrados */}
         <select 
           className="select-filter"
           value={filtroPosgrado} 
           onChange={(e) => setFiltroPosgrado(e.target.value)}
           aria-label="Filtrar por posgrado"
+          disabled={cargando}
         >
           <option value="Todos">Todos los Posgrados</option>
-          <option value="Maestría en Ciencia de Datos">Maestría en Ciencia de Datos</option>
-          <option value="Especialización en Software">Especialización en Software</option>
-          <option value="Doctorado en Informática">Doctorado en Informática</option>
+          {opcionesPosgrados.map((posgrado) => (
+            <option key={posgrado} value={posgrado}>{posgrado}</option>
+          ))}
         </select>
 
+        {/* Filtro con estados oficiales RBAC */}
         <select 
           className="select-filter"
           value={filtroEstado} 
           onChange={(e) => setFiltroEstado(e.target.value)}
           aria-label="Filtrar por estado"
+          disabled={cargando}
         >
           <option value="Todos">Todos los Estados</option>
-          <option value="Aprobada">Aprobadas</option>
-          <option value="Pendiente">Pendientes</option>
-          <option value="Rechazada">Rechazadas</option>
+          {ESTADOS_RBAC.map((est) => (
+            <option key={est.value} value={est.value}>{est.label}</option>
+          ))}
         </select>
 
         <button 
           type="button" 
           className="btn-reset" 
           onClick={handleLimpiarFiltros}
-          disabled={!busqueda && filtroPosgrado === 'Todos' && filtroEstado === 'Todos'}
+          disabled={cargando || (!busqueda && filtroPosgrado === 'Todos' && filtroEstado === 'Todos')}
         >
           Resetear
         </button>
       </div>
 
-      <div className="table-responsive">
+      <div className="table-responsive" aria-busy={cargando}>
         <table className="tabla-custom">
           <thead>
             <tr>
@@ -113,28 +275,29 @@ export const PanelConduccionInscripciones = () => {
             </tr>
           </thead>
           <tbody>
-            {inscripcionesFiltradas.length > 0 ? (
+            {cargando ? (
+              <tr>
+                <td colSpan="6" className="text-center" style={{ padding: '30px', color: '#6c757d' }}>
+                  <p style={{ margin: 0, fontSize: '14px' }}>Cargando inscripciones desde el servidor...</p>
+                </td>
+              </tr>
+            ) : inscripcionesFiltradas.length > 0 ? (
               inscripcionesFiltradas.map((row) => (
-                // La propiedad key es requerida por el Reconciliador de React
                 <tr key={row.id}>
-                  <td className="font-mono">{row.legajo}</td>
-                  <td className="font-semibold">{row.alumno}</td>
-                  <td>{row.posgrado}</td>
-                  <td>{row.cohorte}</td>
-                  <td>{row.fecha}</td>
-                  <td>
-                    {/* Interpolación dinámica de clases CSS según el dominio del estado */}
-                    <span className={`badge badge-${row.estado.toLowerCase()}`}>
-                      {row.estado}
-                    </span>
-                  </td>
+                  <td>{renderNumeroLegajo(row.numero_legajo)}</td>
+                  <td className="font-semibold">{formatearNombreAlumno(row)}</td>
+                  <td>{formatearPosgrado(row.cohorte)}</td>
+                  <td>{formatearCohorte(row.cohorte)}</td>
+                  <td>{formatearFecha(row.fecha_inscripcion || row.created_at)}</td>
+                  <td>{renderBadgeEstado(row.estado)}</td>
                 </tr>
               ))
             ) : (
-              /* Fallback en caso de búsquedas sin coincidencias */
               <tr>
                 <td colSpan="6" className="text-center empty-state">
-                  No se encontraron inscripciones que coincidan con los filtros.
+                  {busqueda || filtroPosgrado !== 'Todos' || filtroEstado !== 'Todos'
+                    ? 'No se encontraron inscripciones que coincidan con los filtros aplicados.'
+                    : 'No hay inscripciones registradas en el sistema.'}
                 </td>
               </tr>
             )}
