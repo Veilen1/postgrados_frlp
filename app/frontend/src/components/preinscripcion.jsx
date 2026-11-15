@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { inscripcionService } from '../services/inscripcionService';
 
 const Paso1DatosPersonales = ({ formData, handleChange, errores, onNext }) => (
   <>
@@ -72,16 +73,52 @@ const Paso2DatosAcademicos = ({ formData, handleChange, errores, onPrev, onNext 
   </>
 );
 
-const Paso3Documentacion = ({ onPrev, onNext }) => (
+const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, onNext }) => (
   <>
     <div style={{background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
-       <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF.
+       <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF y pesar menos de 5MB.
     </div>
     <div className="form-grid">
-      <div className="form-group"><label>Copia de Título Universitario (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Certificado Analítico (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Curriculum Vitae (CV) (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
-      <div className="form-group"><label>Copia de DNI (.pdf)</label><input type="file" accept=".pdf" className="form-control" /></div>
+      <div className="form-group">
+        <label>Copia de Título Universitario (.pdf) <span style={{color: 'red'}}>*</span></label>
+        <input 
+          type="file" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.titulo ? 'error' : ''}`}
+          onChange={(e) => onFileChange('titulo', e)} 
+        />
+        {erroresArchivos?.titulo && <span className="error-text">{erroresArchivos.titulo}</span>}
+      </div>
+      <div className="form-group">
+        <label>Certificado Analítico (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.analitico ? 'error' : ''}`}
+          onChange={(e) => onFileChange('analitico', e)} 
+        />
+        {erroresArchivos?.analitico && <span className="error-text">{erroresArchivos.analitico}</span>}
+      </div>
+      <div className="form-group">
+        <label>Curriculum Vitae (CV) (.pdf)</label>
+        <input 
+          type="file" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.cv ? 'error' : ''}`}
+          onChange={(e) => onFileChange('cv', e)} 
+        />
+        {erroresArchivos?.cv && <span className="error-text">{erroresArchivos.cv}</span>}
+      </div>
+      <div className="form-group">
+        <label>Copia de DNI (.pdf) <span style={{color: 'red'}}>*</span></label>
+        <input 
+          type="file" 
+          accept=".pdf,application/pdf" 
+          className={`form-control ${erroresArchivos?.dni ? 'error' : ''}`}
+          onChange={(e) => onFileChange('dni', e)} 
+        />
+        {erroresArchivos?.dni && <span className="error-text">{erroresArchivos.dni}</span>}
+      </div>
     </div>
     <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
       <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Volver</button>
@@ -90,42 +127,199 @@ const Paso3Documentacion = ({ onPrev, onNext }) => (
   </>
 );
 
-const Paso4Resumen = ({ formData, onPrev, onConfirm }) => (
-  <>
-    <div className="resumen-box">
-      <h3>1. Datos Personales</h3>
+const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConfirm }) => {
+  const formatSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <>
+      <div className="resumen-box">
+        <h3>1. Datos Personales</h3>
+        <div className="resumen-grid">
+          <div className="resumen-item"><span>Nombre Completo</span><p>{formData.nombre || '-'} {formData.apellido || '-'}</p></div>
+          <div className="resumen-item"><span>DNI / Pasaporte</span><p>{formData.dni || '-'}</p></div>
+          <div className="resumen-item"><span>Email</span><p>{formData.email || '-'}</p></div>
+        </div>
+      </div>
+      <div className="resumen-box">
+        <h3>2. Perfil Académico & Postulación</h3>
+        <div className="resumen-grid">
+          <div className="resumen-item"><span>Carrera Seleccionada</span><p><strong>{formData.posgrado}</strong></p></div>
+          <div className="resumen-item"><span>Título de Grado</span><p>{formData.titulo || '-'}</p></div>
+          <div className="resumen-item"><span>Universidad</span><p>{formData.universidad || '-'} {formData.anioEgreso ? `(${formData.anioEgreso})` : ''}</p></div>
+        </div>
+      </div>
+      <div className="resumen-box">
+        <h3>3. Documentación Digital</h3>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+          <li>
+            <strong>Título de Grado:</strong>{' '}
+            {archivos?.titulo ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.titulo.name} ({formatSize(archivos.titulo.size)})</span>
+            ) : (
+              <span style={{ color: '#dc3545' }}>No adjuntado</span>
+            )}
+          </li>
+          <li>
+            <strong>Copia de DNI:</strong>{' '}
+            {archivos?.dni ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.dni.name} ({formatSize(archivos.dni.size)})</span>
+            ) : (
+              <span style={{ color: '#dc3545' }}>No adjuntado</span>
+            )}
+          </li>
+          <li>
+            <strong>Certificado Analítico:</strong>{' '}
+            {archivos?.analitico ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.analitico.name} ({formatSize(archivos.analitico.size)})</span>
+            ) : (
+              <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
+            )}
+          </li>
+          <li>
+            <strong>Curriculum Vitae:</strong>{' '}
+            {archivos?.cv ? (
+              <span style={{ color: '#28a745' }}>📄 {archivos.cv.name} ({formatSize(archivos.cv.size)})</span>
+            ) : (
+              <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
+            )}
+          </li>
+        </ul>
+      </div>
+
+      {errorEnvio && (
+        <div style={{
+          background: '#f8d7da',
+          color: '#721c24',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          border: '1px solid #f5c6cb',
+          marginTop: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          <div>
+            <strong>Error al enviar preinscripción:</strong>
+            <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>{errorEnvio}</p>
+          </div>
+        </div>
+      )}
+
+      <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
+        <button 
+          className="btn-secondary" 
+          style={{flex: 1, opacity: cargando ? 0.6 : 1, cursor: cargando ? 'not-allowed' : 'pointer'}} 
+          onClick={onPrev}
+          disabled={cargando}
+        >
+          Modificar Datos
+        </button>
+        <button 
+          className="btn-primary" 
+          style={{flex: 2, opacity: cargando ? 0.7 : 1, cursor: cargando ? 'not-allowed' : 'pointer'}} 
+          onClick={onConfirm}
+          disabled={cargando}
+        >
+          {cargando ? '⏳ Procesando y subiendo archivos...' : 'Confirmar y Enviar'}
+        </button>
+      </div>
+    </>
+  );
+};
+
+const Paso5Exito = ({ legajoConfirmado, onReset }) => (
+  <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+    <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>✅</div>
+    <h2 style={{ color: '#28a745', marginBottom: '10px' }}>¡Preinscripción Registrada con Éxito!</h2>
+    <p style={{ color: '#555', fontSize: '1.05rem', maxWidth: '540px', margin: '0 auto 25px' }}>
+      Tu solicitud y la documentación digital requerida fueron procesadas correctamente por el sistema de posgrado.
+    </p>
+
+    <div className="resumen-box" style={{ maxWidth: '540px', margin: '0 auto 25px', textAlign: 'left', borderLeft: '4px solid #28a745' }}>
+      <div className="resumen-item" style={{ marginBottom: '12px' }}>
+        <span style={{ fontSize: '0.85rem', color: '#6c757d' }}>IDENTIFICADOR DE TRÁMITE / LEGAJO</span>
+        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1a1a1a', margin: '4px 0 0' }}>
+          {legajoConfirmado?.id || 'Generado'}
+        </p>
+      </div>
       <div className="resumen-grid">
-        <div className="resumen-item"><span>Nombre Completo</span><p>{formData.nombre || '-'} {formData.apellido || '-'}</p></div>
-        <div className="resumen-item"><span>DNI / Pasaporte</span><p>{formData.dni || '-'}</p></div>
-        <div className="resumen-item"><span>Email</span><p>{formData.email || '-'}</p></div>
+        <div className="resumen-item">
+          <span>Aspirante</span>
+          <p>{legajoConfirmado?.nombre || '-'}</p>
+        </div>
+        <div className="resumen-item">
+          <span>Carrera</span>
+          <p>{legajoConfirmado?.posgrado || '-'}</p>
+        </div>
+        <div className="resumen-item" style={{ gridColumn: '1 / -1' }}>
+          <span>Notificaciones enviadas a</span>
+          <p>{legajoConfirmado?.email || '-'}</p>
+        </div>
       </div>
     </div>
-    <div className="resumen-box">
-      <h3>2. Perfil Académico & Postulación</h3>
-      <div className="resumen-grid">
-        <div className="resumen-item"><span>Carrera Seleccionada</span><p><strong>{formData.posgrado}</strong></p></div>
-        <div className="resumen-item"><span>Título de Grado</span><p>{formData.titulo || '-'}</p></div>
-        <div className="resumen-item"><span>Universidad</span><p>{formData.universidad || '-'} {formData.anioEgreso ? `(${formData.anioEgreso})` : ''}</p></div>
-      </div>
+
+    <div style={{ background: '#e8f4fd', color: '#0c5460', padding: '12px 18px', borderRadius: '8px', maxWidth: '540px', margin: '0 auto 25px', fontSize: '0.9rem' }}>
+      ℹ️ La Secretaría de Posgrado auditará los documentos adjuntos y te notificará por correo electrónico ante cualquier novedad.
     </div>
-    <div className="resumen-box">
-      <h3>3. Documentación Digital</h3>
-      <p style={{color: '#28a745', margin: 0}}><strong>✔️ Archivos PDF adjuntos correctamente</strong></p>
-    </div>
-    <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
-      <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Modificar Datos</button>
-      <button className="btn-primary" style={{flex: 2}} onClick={onConfirm}>Confirmar y Enviar</button>
-    </div>
-  </>
+
+    <button className="btn-primary" style={{ minWidth: '220px' }} onClick={onReset}>
+      Iniciar Nueva Preinscripción
+    </button>
+  </div>
 );
 
 export default function Preinscripcion() {
   const [paso, setPaso] = useState(1);
+  const [cargando, setCargando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState(null);
+  const [legajoConfirmado, setLegajoConfirmado] = useState(null);
   const [errores, setErrores] = useState({});
+  const [erroresArchivos, setErroresArchivos] = useState({});
   const [formData, setFormData] = useState({
     nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
     titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
   });
+  // Estado para guardar los archivos PDF seleccionados
+  const [archivos, setArchivos] = useState({
+    titulo: null,
+    analitico: null,
+    cv: null,
+    dni: null,
+  });
+
+  const handleFileChange = (tipo, e) => {
+    const file = e.target.files[0] || null;
+
+    if (!file) {
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Validación 1: Debe ser formato PDF
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: 'Solo se aceptan archivos en formato PDF' }));
+      e.target.value = '';
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Validación 2: Límite de 5MB (5 * 1024 * 1024 bytes)
+    if (file.size > 5 * 1024 * 1024) {
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: 'El archivo es demasiado grande. Máximo permitido: 5MB' }));
+      e.target.value = '';
+      setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      return;
+    }
+
+    // Si es válido, limpiamos el error y guardamos el archivo
+    setErroresArchivos((prev) => ({ ...prev, [tipo]: '' }));
+    setArchivos((prev) => ({ ...prev, [tipo]: file }));
+  };
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});
@@ -163,12 +357,71 @@ export default function Preinscripcion() {
     }
   };
 
-  const handleConfirm = () => {
-    alert('¡Preinscripción enviada con éxito!');
+  const validatePaso3 = () => {
+    const nuevosErrores = {};
+    if (!archivos.titulo) nuevosErrores.titulo = 'La copia del título universitario es obligatoria';
+    if (!archivos.dni) nuevosErrores.dni = 'La copia de DNI es obligatoria';
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErroresArchivos(nuevosErrores);
+    } else {
+      setErroresArchivos({});
+      setPaso(4);
+    }
+  };
+
+  const handleConfirm = async () => {
+    setCargando(true);
+    setErrorEnvio(null);
+    try {
+      // 1. Crear el legajo en el backend con los datos del aspirante
+      const legajo = await inscripcionService.crearPreinscripcion(formData);
+      const legajoId = legajo?.id || legajo?.legajo_id;
+      console.log('Legajo creado exitosamente. ID:', legajoId);
+
+      // 2. Subir los archivos PDF adjuntos asociados a este legajo
+      const documentosAEnviar = [
+        { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
+        { archivo: archivos.dni, tipo: 'DNI' },
+        
+        { archivo: archivos.cv, tipo: 'CV' },
+      ];
+
+      for (const doc of documentosAEnviar) {
+        if (doc.archivo) {
+          await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
+          console.log(`Documento subido: ${doc.tipo}`);
+        }
+      }
+
+      setLegajoConfirmado({
+        id: legajoId,
+        nombre: `${formData.nombre} ${formData.apellido}`,
+        email: formData.email,
+        posgrado: formData.posgrado,
+      });
+      setPaso(5);
+    } catch (error) {
+      console.error('Error en el proceso de inscripción:', error);
+      setErrorEnvio(error.message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleReset = () => {
     setPaso(1);
+    setLegajoConfirmado(null);
+    setErrorEnvio(null);
     setFormData({
       nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '',
       titulo: '', universidad: '', anioEgreso: '', posgrado: 'Maestría en Ingeniería'
+    });
+    setArchivos({
+      titulo: null,
+      analitico: null,
+      cv: null,
+      dni: null,
     });
   };
 
@@ -182,7 +435,8 @@ export default function Preinscripcion() {
           <span className={`step ${paso === 1 ? 'active' : (paso > 1 ? 'completed' : '')}`}><span className="circle">{paso > 1 ? '✓' : '1'}</span> Datos Personales</span>
           <span className={`step ${paso === 2 ? 'active' : (paso > 2 ? 'completed' : '')}`}>— <span className="circle">{paso > 2 ? '✓' : '2'}</span> Datos Academicos</span>
           <span className={`step ${paso === 3 ? 'active' : (paso > 3 ? 'completed' : '')}`}>— <span className="circle">{paso > 3 ? '✓' : '3'}</span> Documentación</span>
-          <span className={`step ${paso === 4 ? 'active' : ''}`}>— <span className="circle">4</span> Resumen</span>
+          <span className={`step ${paso === 4 ? 'active' : (paso > 4 ? 'completed' : '')}`}>— <span className="circle">{paso > 4 ? '✓' : '4'}</span> Resumen</span>
+          {paso === 5 && <span className="step active">— <span className="circle">✓</span> Confirmación</span>}
         </div>
         
         {paso === 1 && (
@@ -206,16 +460,29 @@ export default function Preinscripcion() {
         
         {paso === 3 && (
           <Paso3Documentacion
+            archivos={archivos}
+            erroresArchivos={erroresArchivos}
+            onFileChange={handleFileChange}
             onPrev={() => setPaso(2)}
-            onNext={() => setPaso(4)}
+            onNext={validatePaso3}
           />
         )}
         
         {paso === 4 && (
           <Paso4Resumen
             formData={formData}
-            onPrev={() => setPaso(3)}
+            archivos={archivos}
+            cargando={cargando}
+            errorEnvio={errorEnvio}
+            onPrev={() => { setErrorEnvio(null); setPaso(3); }}
             onConfirm={handleConfirm}
+          />
+        )}
+
+        {paso === 5 && (
+          <Paso5Exito
+            legajoConfirmado={legajoConfirmado}
+            onReset={handleReset}
           />
         )}
       </div>
