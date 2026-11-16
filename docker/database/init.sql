@@ -161,3 +161,15 @@ VALUES (
     'ASPIRANTE',
     true
 ) ON CONFLICT (email) DO NOTHING;
+
+-- 7.4 Usuario Docente de Prueba (Password: 'Docente123!')
+INSERT INTO usuarios (id, email, password_hash, nombre, apellido, rol, activo)
+VALUES (
+    'd4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70',
+    'docente.demo@posgrado.frlp.utn.edu.ar',
+    crypt('Docente123!', gen_salt('bf', 12)),
+    'Docente',
+    'Demo',
+    'DOCENTE',
+    true
+) ON CONFLICT (email) DO NOTHING;
