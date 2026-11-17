@@ -176,4 +176,175 @@ describe('Preinscripcion Component', () => {
     expect(subirSpy).toHaveBeenCalledTimes(2);
     expect(enviarSpy).toHaveBeenCalledWith('leg-obs');
   });
+
+  it('carga los datos y documentos de un borrador para completar sin volver a subir lo existente', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    localStorage.setItem('user_profile', JSON.stringify({
+      id: 'u-1',
+      rol: 'ASPIRANTE',
+      nombre: 'Lucio',
+      apellido: 'Angel',
+      email: 'lucio@utn.edu.ar',
+    }));
+    vi.spyOn(inscripcionService, 'obtenerCohortes').mockResolvedValue(mockCohortes);
+    const actualizarSpy = vi.spyOn(inscripcionService, 'actualizarPreinscripcion').mockResolvedValue({
+      id: 'leg-borrador',
+    });
+    const subirSpy = vi.spyOn(inscripcionService, 'subirDocumento');
+    const enviarSpy = vi.spyOn(inscripcionService, 'enviarLegajo').mockResolvedValue({
+      id: 'leg-borrador',
+      estado: 'ENVIADO',
+    });
+
+    const initialLegajo = {
+      legajo: {
+        id: 'leg-borrador',
+        estado: 'BORRADOR',
+        cohorte_id: 'cohorte-1',
+        cohorte: mockCohortes[0],
+        nombre: 'Lucio',
+        apellido: 'Angel',
+        email: 'lucio@utn.edu.ar',
+        dni: '40123456',
+        nacionalidad: 'Argentina',
+        domicilio: 'La Plata',
+        titulo: 'Ingeniero en Sistemas',
+        universidad: 'UTN FRLP',
+        anio_egreso: 2025,
+      },
+      documentos: [
+        { id: 'doc-titulo', tipo: 'TITULO_GRADO', nombre_original: 'titulo.pdf' },
+        { id: 'doc-dni', tipo: 'DNI', nombre_original: 'dni.pdf' },
+      ],
+    };
+
+    const { container } = render(
+      <Preinscripcion initialLegajo={initialLegajo} onVolverAMiLegajo={() => {}} />
+    );
+
+    expect(container.querySelector('input[name="dni"]').value).toBe('40123456');
+    fireEvent.click(screen.getByText('Continuar a Datos Académicos'));
+    await waitFor(() => {
+      expect(container.querySelector('input[name="titulo"]').value).toBe('Ingeniero en Sistemas');
+    });
+    expect(container.querySelector('input[name="universidad"]').value).toBe('UTN FRLP');
+    expect(container.querySelector('input[name="anioEgreso"]').value).toBe('2025');
+
+    fireEvent.click(screen.getByText('Continuar a Documentación'));
+    await waitFor(() => {
+      expect(screen.getByText('Ya cargado: titulo.pdf')).toBeDefined();
+    });
+    fireEvent.click(screen.getByText('Generar Resumen de Legajo'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirmar y Enviar')).toBeDefined();
+    });
+    fireEvent.click(screen.getByText('Confirmar y Enviar'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Preinscripción Registrada con Éxito/i)).toBeDefined();
+    });
+    expect(actualizarSpy).toHaveBeenCalledWith('leg-borrador', expect.objectContaining({
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anioEgreso: 2025,
+    }));
+    expect(subirSpy).not.toHaveBeenCalled();
+    expect(enviarSpy).toHaveBeenCalledWith('leg-borrador');
+    expect(screen.getByRole('button', { name: 'Volver a Mi Legajo' })).toBeDefined();
+  });
+
+  it('permite subsanar una observación, reemplazar un documento y reenviar el mismo legajo', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    localStorage.setItem('user_profile', JSON.stringify({
+      id: 'u-1',
+      rol: 'ASPIRANTE',
+      nombre: 'Lucio',
+      apellido: 'Angel',
+      email: 'lucio@utn.edu.ar',
+    }));
+    vi.spyOn(inscripcionService, 'obtenerCohortes').mockResolvedValue(mockCohortes);
+    const actualizarSpy = vi.spyOn(inscripcionService, 'actualizarPreinscripcion').mockResolvedValue({
+      id: 'leg-observado',
+    });
+    const eliminarSpy = vi.spyOn(inscripcionService, 'eliminarDocumento').mockResolvedValue(null);
+    const subirSpy = vi.spyOn(inscripcionService, 'subirDocumento').mockResolvedValue({
+      id: 'doc-titulo-nuevo',
+      nombre_original: 'titulo-corregido.pdf',
+    });
+    const enviarSpy = vi.spyOn(inscripcionService, 'enviarLegajo').mockResolvedValue({
+      id: 'leg-observado',
+      estado: 'ENVIADO',
+    });
+
+    const initialLegajo = {
+      legajo: {
+        id: 'leg-observado',
+        estado: 'OBSERVADO',
+        motivo_observacion: 'Reemplazá el título por una copia legible y completá el año de egreso.',
+        cohorte_id: 'cohorte-1',
+        cohorte: mockCohortes[0],
+        nombre: 'Lucio',
+        apellido: 'Angel',
+        email: 'lucio@utn.edu.ar',
+        dni: '40123456',
+        titulo: 'Ingeniero en Sistemas',
+        universidad: 'UTN FRLP',
+        anio_egreso: null,
+      },
+      documentos: [
+        { id: 'doc-titulo-anterior', tipo: 'TITULO_GRADO', nombre_original: 'titulo-anterior.pdf' },
+        { id: 'doc-dni', tipo: 'DNI', nombre_original: 'dni.pdf' },
+      ],
+    };
+
+    const { container } = render(
+      <Preinscripcion initialLegajo={initialLegajo} onVolverAMiLegajo={() => {}} />
+    );
+
+    expect(screen.getByText(/Reemplazá el título por una copia legible/i)).toBeDefined();
+    fireEvent.click(screen.getByText('Continuar a Datos Académicos'));
+    await waitFor(() => {
+      expect(container.querySelector('input[name="anioEgreso"]')).not.toBeNull();
+    });
+    fireEvent.change(container.querySelector('input[name="anioEgreso"]'), {
+      target: { value: '2025' },
+    });
+    fireEvent.click(screen.getByText('Continuar a Documentación'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Ya cargado: titulo-anterior.pdf')).toBeDefined();
+    });
+    const titleInput = container.querySelectorAll('input[type="file"]')[0];
+    fireEvent.change(titleInput, {
+      target: {
+        files: [new File(['%PDF-1.4 corregido'], 'titulo-corregido.pdf', { type: 'application/pdf' })],
+      },
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Ya cargado: titulo-anterior.pdf')).toBeNull();
+    });
+    fireEvent.click(screen.getByText('Generar Resumen de Legajo'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Confirmar y Enviar')).toBeDefined();
+    });
+    fireEvent.click(screen.getByText('Confirmar y Enviar'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Preinscripción Registrada con Éxito/i)).toBeDefined();
+    });
+    expect(actualizarSpy).toHaveBeenCalledWith('leg-observado', expect.objectContaining({
+      anioEgreso: '2025',
+    }));
+    expect(eliminarSpy).toHaveBeenCalledTimes(1);
+    expect(eliminarSpy).toHaveBeenCalledWith('doc-titulo-anterior');
+    expect(subirSpy).toHaveBeenCalledTimes(1);
+    expect(subirSpy).toHaveBeenCalledWith(
+      'leg-observado',
+      'TITULO_GRADO',
+      expect.objectContaining({ name: 'titulo-corregido.pdf' })
+    );
+    expect(enviarSpy).toHaveBeenCalledWith('leg-observado');
+  });
 });

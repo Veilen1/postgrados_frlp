@@ -2,6 +2,17 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+function optionalText(value) {
+  const normalized = String(value ?? '').trim();
+  return normalized || null;
+}
+
+function optionalYear(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const year = Number(value);
+  return Number.isInteger(year) ? year : null;
+}
+
 /**
  * Helper base para peticiones HTTP
  * Inyecta el token JWT Bearer si existe sesión activa (salvo skipAuth) y parsea errores de FastAPI
@@ -115,6 +126,11 @@ export const inscripcionService = {
     const payload = {
       dni: String(datosAspirante.dni)?.trim(),
       ...(cohorteId ? { cohorte_id: cohorteId } : {}),
+      nacionalidad: optionalText(datosAspirante.nacionalidad),
+      domicilio: optionalText(datosAspirante.domicilio),
+      titulo: optionalText(datosAspirante.titulo),
+      universidad: optionalText(datosAspirante.universidad),
+      anio_egreso: optionalYear(datosAspirante.anioEgreso),
       solicita_beca: Boolean(datosAspirante.solicitaBeca),
       tipo_beca: datosAspirante.tipoBeca || null,
     };
@@ -139,6 +155,11 @@ export const inscripcionService = {
       ...(datosAspirante.nombre ? { nombre: String(datosAspirante.nombre).trim() } : {}),
       ...(datosAspirante.apellido ? { apellido: String(datosAspirante.apellido).trim() } : {}),
       ...(datosAspirante.email ? { email: String(datosAspirante.email).trim().toLowerCase() } : {}),
+      nacionalidad: optionalText(datosAspirante.nacionalidad),
+      domicilio: optionalText(datosAspirante.domicilio),
+      titulo: optionalText(datosAspirante.titulo),
+      universidad: optionalText(datosAspirante.universidad),
+      anio_egreso: optionalYear(datosAspirante.anioEgreso),
       solicita_beca: Boolean(datosAspirante.solicitaBeca),
       tipo_beca: datosAspirante.tipoBeca || null,
     };
