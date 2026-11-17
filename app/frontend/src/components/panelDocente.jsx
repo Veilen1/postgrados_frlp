@@ -3,6 +3,7 @@ import './panelDocente.css';
 
 export default function PanelDocente() {
   const [fechas, setFechas] = useState(['2026-05-10', '2026-05-17', '2026-05-24']);
+  const [feedbackDocente, setFeedbackDocente] = useState(null);
 
   const alumnos = [
     { apellido: 'Altamirano', nombre: 'Florencia', correo: 'aFlorencia@ejemplo.com', titulo: 'Ingeniería', a1: true, a2: false, a3: true, nota: '8' },
@@ -81,9 +82,14 @@ export default function PanelDocente() {
           </tbody>
         </table>
 
+        {feedbackDocente && (
+          <div role="status" style={{ backgroundColor: '#d1e7dd', color: '#0f5132', border: '1px solid #badbcc', borderRadius: '4px', padding: '10px 14px', marginBottom: '14px', fontSize: '13px' }}>
+            {feedbackDocente}
+          </div>
+        )}
         <div className="docente-actions">
-           <button className="btn-secondary" style={{width: 'auto'}} onClick={() => alert('Generando PDF...')}>Descargar Plantilla (PDF)</button>
-           <button className="btn-primary" style={{width: 'auto'}} onClick={() => alert('Sincronizando...')}>Guardar y Sincronizar</button>
+           <button className="btn-secondary" style={{width: 'auto'}} onClick={() => setFeedbackDocente('✓ Plantilla PDF descargada exitosamente.')}>Descargar Plantilla (PDF)</button>
+           <button className="btn-primary" style={{width: 'auto'}} onClick={() => setFeedbackDocente('✓ Calificaciones guardadas y sincronizadas exitosamente.')}>Guardar y Sincronizar</button>
         </div>
       </div>
     </div>
