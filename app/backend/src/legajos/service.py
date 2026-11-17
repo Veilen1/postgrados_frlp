@@ -64,18 +64,19 @@ async def create_legajo(
         cohorte=cohorte,
     )
     db.add(legajo)
-    db.add(
-        AuditoriaLegajo(
-            id=uuid4(),
-            legajo_id=legajo.id,
-            estado_anterior=None,
-            estado_nuevo=LegajoEstado.BORRADOR.value,
-            comentario="Creación del legajo",
-            usuario_id=user_id,
-        )
-    )
 
     try:
+        await db.flush()
+        db.add(
+            AuditoriaLegajo(
+                id=uuid4(),
+                legajo_id=legajo.id,
+                estado_anterior=None,
+                estado_nuevo=LegajoEstado.BORRADOR.value,
+                comentario="Creación del legajo",
+                usuario_id=user_id,
+            )
+        )
         await db.commit()
     except IntegrityError:
         await db.rollback()

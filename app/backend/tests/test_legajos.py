@@ -4,12 +4,15 @@ from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy import event, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.auth.security import create_access_token, hash_password
 from src.cohortes.models import Cohorte
 from src.legajos.models import AuditoriaLegajo, Documento
+from src.legajos.schemas import LegajoCreate
+from src.legajos.service import create_legajo
+from src.shared.database import Base
 from src.shared.models import User
 
 PASSWORD = "Correct-Horse-Battery-42"
@@ -542,3 +545,37 @@ async def test_approval_requires_cohort_identifier_and_respects_sequence_limit(
     )
     assert full_sequence.status_code == 400
     assert "999" in full_sequence.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_create_legajo_respects_foreign_key_order() -> None:
+    engine = create_async_engine("sqlite+aiosqlite://")
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_fk(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        user = await create_user(session_factory, email="fk-test@example.com")
+        cohort = await create_cohort(session_factory)
+        async with session_factory() as session:
+            db_user = await session.get(User, user.id)
+            assert db_user is not None
+            legajo = await create_legajo(
+                session,
+                LegajoCreate(cohorte_id=cohort.id, dni="31999888"),
+                db_user,
+            )
+            audit = await session.scalar(
+                select(AuditoriaLegajo).where(AuditoriaLegajo.legajo_id == legajo.id)
+            )
+            assert audit is not None
+            assert audit.estado_nuevo == "BORRADOR"
+    finally:
+        await engine.dispose()

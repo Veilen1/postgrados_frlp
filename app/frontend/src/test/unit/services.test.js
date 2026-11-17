@@ -3,6 +3,7 @@ import { cohorteService } from '../../services/cohorteService';
 import { legajoService } from '../../services/legajoService';
 import { inscripcionService } from '../../services/inscripcionService';
 import { authService } from '../../services/authService';
+import { apiClient } from '../../services/apiClient';
 
 describe('cohorteService', () => {
   beforeEach(() => {
@@ -129,6 +130,60 @@ describe('legajoService', () => {
       expect.objectContaining({ method: 'GET' })
     );
     expect(docs).toHaveLength(1);
+  });
+
+  it('descargarDocumento captura errores de conexión con mensaje claro', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(legajoService.descargarDocumento('d-1')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
+  });
+
+  it('descargarDocumento parsea el mensaje detail cuando la API devuelve error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify({ detail: 'Documento no encontrado o inaccesible' }),
+    });
+
+    await expect(legajoService.descargarDocumento('d-inexistente')).rejects.toThrow(
+      'Documento no encontrado o inaccesible'
+    );
+  });
+
+  it('obtenerUrlVisorDocumento captura errores de conexión con mensaje claro', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(legajoService.obtenerUrlVisorDocumento('d-1')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
+  });
+
+  it('obtenerUrlVisorDocumento parsea el detail de error devuelto por la API', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify({ detail: 'No tiene permisos para ver este documento' }),
+    });
+
+    await expect(legajoService.obtenerUrlVisorDocumento('d-prohibido')).rejects.toThrow(
+      'No tiene permisos para ver este documento'
+    );
+  });
+});
+
+describe('apiClient', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('captura TypeError / Failed to fetch y lanza error amigable con status 0', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(apiClient('/legajos')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
   });
 });
 
