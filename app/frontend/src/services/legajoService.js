@@ -113,13 +113,46 @@ export const legajoService = {
    */
   async descargarDocumento(documentId, nombreOriginal = 'documento.pdf') {
     const url = `${API_URL}/documentos/${documentId}/download`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: authService.getAuthHeaders(),
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: authService.getAuthHeaders(),
+      });
+    } catch (err) {
+      if (
+        err instanceof TypeError ||
+        err?.name === 'TypeError' ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('network error')
+      ) {
+        const networkError = new Error('No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.');
+        networkError.status = 0;
+        networkError.originalError = err;
+        throw networkError;
+      }
+      throw err;
+    }
 
     if (!response.ok) {
-      throw new Error(`Error al descargar el archivo (${response.status})`);
+      let mensaje = `Error al descargar el archivo (${response.status})`;
+      try {
+        const errorText = await response.text();
+        const errorBody = JSON.parse(errorText);
+        if (typeof errorBody?.detail === 'string') {
+          mensaje = errorBody.detail;
+        } else if (Array.isArray(errorBody?.detail)) {
+          mensaje = errorBody.detail.map((err) => `${err.loc?.slice(-1)}: ${err.msg}`).join(', ');
+        } else if (errorBody?.message) {
+          mensaje = errorBody.message;
+        }
+      } catch {
+        // Si no es JSON o falla el parseo, se mantiene el mensaje por defecto
+      }
+      const error = new Error(mensaje);
+      error.status = response.status;
+      throw error;
     }
 
     const blob = await response.blob();
@@ -142,13 +175,46 @@ export const legajoService = {
    */
   async obtenerUrlVisorDocumento(documentId) {
     const url = `${API_URL}/documentos/${documentId}/download`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: authService.getAuthHeaders(),
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: authService.getAuthHeaders(),
+      });
+    } catch (err) {
+      if (
+        err instanceof TypeError ||
+        err?.name === 'TypeError' ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.message?.includes('NetworkError') ||
+        err?.message?.includes('network error')
+      ) {
+        const networkError = new Error('No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.');
+        networkError.status = 0;
+        networkError.originalError = err;
+        throw networkError;
+      }
+      throw err;
+    }
 
     if (!response.ok) {
-      throw new Error(`Error al abrir el documento (${response.status})`);
+      let mensaje = `Error al abrir el documento (${response.status})`;
+      try {
+        const errorText = await response.text();
+        const errorBody = JSON.parse(errorText);
+        if (typeof errorBody?.detail === 'string') {
+          mensaje = errorBody.detail;
+        } else if (Array.isArray(errorBody?.detail)) {
+          mensaje = errorBody.detail.map((err) => `${err.loc?.slice(-1)}: ${err.msg}`).join(', ');
+        } else if (errorBody?.message) {
+          mensaje = errorBody.message;
+        }
+      } catch {
+        // Si no es JSON, se conserva el mensaje por defecto
+      }
+      const error = new Error(mensaje);
+      error.status = response.status;
+      throw error;
     }
 
     const blob = await response.blob();

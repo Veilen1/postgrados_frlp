@@ -25,6 +25,11 @@ class LegajoCreate(BaseModel):
 
     cohorte_id: UUID
     dni: str = Field(min_length=1, max_length=20)
+    nacionalidad: str | None = Field(default=None, max_length=100)
+    domicilio: str | None = Field(default=None, max_length=255)
+    titulo: str | None = Field(default=None, max_length=255)
+    universidad: str | None = Field(default=None, max_length=255)
+    anio_egreso: int | None = None
     solicita_beca: bool = False
     tipo_beca: str | None = Field(default=None, max_length=20)
 
@@ -37,6 +42,11 @@ class LegajoUpdate(BaseModel):
     apellido: str | None = Field(default=None, min_length=1, max_length=100)
     nombre: str | None = Field(default=None, min_length=1, max_length=100)
     email: EmailStr | None = Field(default=None, max_length=255)
+    nacionalidad: str | None = Field(default=None, max_length=100)
+    domicilio: str | None = Field(default=None, max_length=255)
+    titulo: str | None = Field(default=None, max_length=255)
+    universidad: str | None = Field(default=None, max_length=255)
+    anio_egreso: int | None = None
     solicita_beca: bool | None = None
     tipo_beca: str | None = Field(default=None, max_length=20)
 
@@ -88,6 +98,11 @@ class LegajoResponse(BaseModel):
     apellido: str
     nombre: str
     email: EmailStr
+    nacionalidad: str | None
+    domicilio: str | None
+    titulo: str | None
+    universidad: str | None
+    anio_egreso: int | None
     estado: LegajoEstado
     solicita_beca: bool | None
     tipo_beca: str | None

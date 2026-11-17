@@ -17,7 +17,24 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/ap
 export async function apiClient(endpoint, options = {}) {
   const url = `${API_URL}${endpoint}`;
 
-  const response = await fetch(url, options);
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (err) {
+    if (
+      err instanceof TypeError ||
+      err?.name === 'TypeError' ||
+      err?.message?.includes('Failed to fetch') ||
+      err?.message?.includes('NetworkError') ||
+      err?.message?.includes('network error')
+    ) {
+      const networkError = new Error('No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.');
+      networkError.status = 0;
+      networkError.originalError = err;
+      throw networkError;
+    }
+    throw err;
+  }
 
   // Si la respuesta no es 2xx, parseamos el error del backend
   if (!response.ok) {

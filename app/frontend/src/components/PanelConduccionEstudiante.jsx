@@ -480,6 +480,26 @@ export default function PanelConduccionEstudiante({ legajoInicial }) {
                     <input type="text" className="form-control" value={estudianteActual.cohorte?.carrera || 'No especificada'} readOnly />
                   </div>
                   <div className="form-group">
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Título de Grado</label>
+                    <input type="text" className="form-control" value={estudianteActual.titulo || 'Pendiente'} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Universidad de Origen</label>
+                    <input type="text" className="form-control" value={estudianteActual.universidad || 'Pendiente'} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Año de Egreso</label>
+                    <input type="text" className="form-control" value={estudianteActual.anio_egreso || 'Pendiente'} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Nacionalidad</label>
+                    <input type="text" className="form-control" value={estudianteActual.nacionalidad || '—'} readOnly />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Domicilio</label>
+                    <input type="text" className="form-control" value={estudianteActual.domicilio || '—'} readOnly />
+                  </div>
+                  <div className="form-group">
                     <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>Código Oficial</label>
                     <input type="text" className="form-control" value={estudianteActual.cohorte?.codigo_carrera || '—'} readOnly />
                   </div>

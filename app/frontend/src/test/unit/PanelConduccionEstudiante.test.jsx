@@ -17,6 +17,11 @@ describe('PanelConduccionEstudiante Component', () => {
         nombre: 'Juan',
         apellido: 'Perez',
         email: 'juan.perez@example.com',
+        nacionalidad: 'Argentina',
+        domicilio: 'La Plata',
+        titulo: 'Ingeniero en Sistemas',
+        universidad: 'UTN FRLP',
+        anio_egreso: 2025,
         estado: 'APROBADO',
         semaforo: 'VERDE',
         solicita_beca: false,
@@ -74,6 +79,13 @@ describe('PanelConduccionEstudiante Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/50% \(2\/4 docs\)/i)).toBeDefined();
     });
+
+    fireEvent.click(screen.getByText(/Ficha Académica y Posgrado/i));
+    expect(screen.getByDisplayValue('Ingeniero en Sistemas')).toBeDefined();
+    expect(screen.getByDisplayValue('UTN FRLP')).toBeDefined();
+    expect(screen.getByDisplayValue('2025')).toBeDefined();
+    expect(screen.getByDisplayValue('Argentina')).toBeDefined();
+    expect(screen.getByDisplayValue('La Plata')).toBeDefined();
   });
 
   it('permite buscar y seleccionar otro estudiante observando su motivo', async () => {

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../../App';
 import { cohorteService } from '../../services/cohorteService';
 import { legajoService } from '../../services/legajoService';
+import { inscripcionService } from '../../services/inscripcionService';
 import { authService } from '../../services/authService';
 
 describe('Flujo E2E Completo del Módulo Core', () => {
@@ -114,10 +115,11 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText('(ADMIN_POSGRADO)')).toBeDefined();
       expect(screen.getByText(/Panel de Equipo de conducción/i)).toBeDefined();
     });
+    expect(screen.queryByRole('button', { name: 'Preinscripcion' })).toBeNull();
     expect(JSON.parse(localStorage.getItem('user_profile')).rol).toBe('ADMIN_POSGRADO');
   });
 
-  it('no muestra el acceso al Panel Docente para un aspirante', async () => {
+  it('inicia al aspirante en Mi Legajo y ofrece comenzar si todavía no tiene postulación', async () => {
     const aspirante = {
       id: 'aspirante-id',
       nombre: 'Juan',
@@ -137,6 +139,9 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       }),
     });
     vi.spyOn(cohorteService, 'obtenerCohortes').mockResolvedValue(mockCohortes);
+    const sinLegajo = new Error('El usuario todavía no tiene un legajo');
+    sinLegajo.status = 404;
+    vi.spyOn(inscripcionService, 'obtenerMiLegajo').mockRejectedValue(sinLegajo);
 
     render(<App />);
     fireEvent.change(screen.getByPlaceholderText(/Correo institucional/i), {
@@ -149,9 +154,69 @@ describe('Flujo E2E Completo del Módulo Core', () => {
 
     await waitFor(() => {
       expect(screen.getByText('(ASPIRANTE)')).toBeDefined();
+      expect(screen.getByText('Todavía no tenés una postulación iniciada.')).toBeDefined();
     });
+    expect(screen.getByRole('button', { name: 'Mi Legajo' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Iniciar preinscripción' })).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Docente' })).toBeNull();
     expect(screen.queryByText(/Panel de Equipo de conducción/i)).toBeNull();
+  });
+
+  it('muestra la postulación existente al aspirante después del login', async () => {
+    const aspirante = {
+      id: 'aspirante-id',
+      nombre: 'Juan',
+      apellido: 'Perez',
+      email: 'aspirante.demo@posgrado.frlp.utn.edu.ar',
+      rol: 'ASPIRANTE',
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        access_token: 'aspirante-token',
+        refresh_token: 'aspirante-refresh',
+        token_type: 'bearer',
+        expires_in: 28800,
+        user: aspirante,
+      }),
+    });
+    vi.spyOn(inscripcionService, 'obtenerMiLegajo').mockResolvedValue({
+      id: 'legajo-aspirante',
+      numero_legajo: null,
+      cohorte_id: 'cohorte-1',
+      cohorte: mockCohortes[0],
+      dni: '30123456',
+      apellido: 'Perez',
+      nombre: 'Juan',
+      email: aspirante.email,
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anio_egreso: 2024,
+      estado: 'EN_REVISION',
+      fecha_inscripcion: '2026-03-01T10:00:00Z',
+      motivo_observacion: null,
+    });
+    vi.spyOn(inscripcionService, 'obtenerDocumentos').mockResolvedValue([
+      { id: 'doc-dni', tipo: 'DNI', nombre_original: 'dni.pdf' },
+      { id: 'doc-titulo', tipo: 'TITULO_GRADO', nombre_original: 'titulo.pdf' },
+    ]);
+
+    render(<App />);
+    fireEvent.change(screen.getByPlaceholderText(/Correo institucional/i), {
+      target: { value: aspirante.email },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Contraseña'), {
+      target: { value: 'Aspirante123!' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar Sesión' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Estado de la postulación')).toBeDefined();
+      expect(screen.getByText('En revisión')).toBeDefined();
+      expect(screen.getByText(/titulo\.pdf/)).toBeDefined();
+    });
+    expect(screen.queryByText('Sistema de Posgrado - Preinscripción')).toBeNull();
   });
 
   it('permite al docente iniciar sesión y ver su panel', async () => {
@@ -188,6 +253,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText('Panel DOCENTE')).toBeDefined();
     });
     expect(screen.getByRole('button', { name: 'Docente' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Mi Legajo' })).toBeNull();
     expect(JSON.parse(localStorage.getItem('user_profile')).rol).toBe('DOCENTE');
   });
 
@@ -213,6 +279,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText(/Panel de Equipo de conducción/i)).toBeDefined();
       expect(screen.getByText('Carlos Rodriguez')).toBeDefined();
     });
+    expect(screen.queryByRole('button', { name: 'Preinscripcion' })).toBeNull();
 
     // Estado actual: En Revisión y "Se asigna al aprobar"
     expect(screen.getByText('Se asigna al aprobar')).toBeDefined();

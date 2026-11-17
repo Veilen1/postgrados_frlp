@@ -30,6 +30,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(DocumentUploadLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(
@@ -39,7 +40,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(DocumentUploadLimitMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 
