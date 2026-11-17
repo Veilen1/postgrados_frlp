@@ -57,9 +57,10 @@ describe('Preinscripcion Component', () => {
     });
   });
 
-  it('reutiliza el legajo creado ante reintento y limpia la sesion publica al finalizar', async () => {
+  it('reutiliza el legajo, evita resubir documentos ya cargados y limpia sesion vencida en flujo publico', async () => {
+    localStorage.setItem('access_token', 'token-vencido-huerfano');
     vi.spyOn(inscripcionService, 'obtenerCohortes').mockResolvedValue(mockCohortes);
-    vi.spyOn(authService, 'registroAspirante').mockResolvedValue({ id: 'u-1', rol: 'ASPIRANTE' });
+    const registroSpy = vi.spyOn(authService, 'registroAspirante').mockResolvedValue({ id: 'u-1', rol: 'ASPIRANTE' });
     vi.spyOn(authService, 'login').mockImplementation(async () => {
       localStorage.setItem('access_token', 'jwt-temp');
       localStorage.setItem('user_profile', JSON.stringify({ id: 'u-1', rol: 'ASPIRANTE' }));
@@ -75,8 +76,9 @@ describe('Preinscripcion Component', () => {
 
     const subirSpy = vi
       .spyOn(inscripcionService, 'subirDocumento')
+      .mockResolvedValueOnce({ id: 'doc-titulo' })
       .mockRejectedValueOnce(new Error('Fallo temporal de red'))
-      .mockResolvedValue({ id: 'doc-1' });
+      .mockResolvedValueOnce({ id: 'doc-dni' });
 
     const enviarSpy = vi
       .spyOn(inscripcionService, 'enviarLegajo')
@@ -95,20 +97,22 @@ describe('Preinscripcion Component', () => {
       expect(screen.getByText('Confirmar y Enviar')).toBeDefined();
     });
 
-    // Primer intento: falla subirDocumento después de crear el legajo
+    // Primer intento: sube TITULO_GRADO, falla DNI después de crear el legajo
     fireEvent.click(screen.getByText('Confirmar y Enviar'));
     await waitFor(() => {
       expect(screen.getByText(/Fallo temporal de red/i)).toBeDefined();
     });
 
-    // Reintento: NO debe volver a crear el legajo ni re-registrar usuario
+    // Reintento: NO debe volver a crear el legajo, NO re-registra ni re-sube TITULO_GRADO
     fireEvent.click(screen.getByText('Confirmar y Enviar'));
     await waitFor(() => {
       expect(screen.getByText(/Preinscripción Registrada con Éxito/i)).toBeDefined();
     });
 
+    expect(registroSpy).toHaveBeenCalledTimes(1);
     expect(crearSpy).toHaveBeenCalledTimes(1);
     expect(subirSpy).toHaveBeenCalledTimes(3);
+    expect(subirSpy.mock.calls.map((c) => c[1])).toEqual(['TITULO_GRADO', 'DNI', 'DNI']);
     expect(enviarSpy).toHaveBeenCalledWith('legajo-123');
     expect(logoutSpy).toHaveBeenCalled();
   });

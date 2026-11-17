@@ -155,7 +155,7 @@ const Paso2DatosAcademicos = ({
   </>
 );
 
-const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, onNext }) => (
+const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFileChange, onPrev, onNext }) => (
   <>
     <div style={{background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
        <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF y pesar menos de 5MB.
@@ -204,7 +204,14 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, onFileChange, onPrev, o
     </div>
     <div style={{display: 'flex', gap: '15px', marginTop: '20px'}}>
       <button className="btn-secondary" style={{flex: 1}} onClick={onPrev}>Volver</button>
-      <button className="btn-primary" style={{flex: 2}} onClick={onNext}>Generar Resumen de Legajo</button>
+      <button
+        className="btn-primary"
+        style={{flex: 2, opacity: validandoArchivos ? 0.7 : 1, cursor: validandoArchivos ? 'wait' : 'pointer'}}
+        onClick={onNext}
+        disabled={validandoArchivos}
+      >
+        {validandoArchivos ? 'Verificando archivo PDF...' : 'Generar Resumen de Legajo'}
+      </button>
     </div>
   </>
 );
@@ -361,7 +368,16 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const [errorEnvio, setErrorEnvio] = useState(null);
   const [legajoConfirmado, setLegajoConfirmado] = useState(null);
   const [legajoIdEnCurso, setLegajoIdEnCurso] = useState(null);
+  const [tiposSubidos, setTiposSubidos] = useState([]);
+  const [validandoArchivos, setValidandoArchivos] = useState(0);
   const [sesionPublicaCreada, setSesionPublicaCreada] = useState(false);
+  const [requiereCuenta, setRequiereCuenta] = useState(() => {
+    if (onVolverAlLogin) {
+      authService.logout();
+      return true;
+    }
+    return !authService.isAuthenticated();
+  });
   const [errores, setErrores] = useState({});
   const [erroresArchivos, setErroresArchivos] = useState({});
 
@@ -370,7 +386,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const [cargandoCohortes, setCargandoCohortes] = useState(true);
   const [errorCohortes, setErrorCohortes] = useState(null);
 
-  const usuarioInicial = authService.getUser();
+  const usuarioInicial = onVolverAlLogin ? null : authService.getUser();
   const [formData, setFormData] = useState({
     nombre: usuarioInicial?.nombre || '',
     apellido: usuarioInicial?.apellido || '',
@@ -386,7 +402,6 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     posgrado: '',
     nombreCohorte: '',
   });
-  const requiereCuenta = !authService.isAuthenticated();
 
   const cargarCohortes = useCallback(async () => {
     try {
@@ -466,6 +481,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
 
     // Validación 3: Firma binaria real %PDF (evita archivos renombrados que el backend rechaza con 415)
     if (typeof file.slice === 'function') {
+      setValidandoArchivos((prev) => prev + 1);
       try {
         const header = await leerCabeceraPdf(file);
         if (header !== '%PDF') {
@@ -479,7 +495,15 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         }
       } catch {
         // Si el navegador no permite leer el slice, delegamos la validación al servidor
+      } finally {
+        setValidandoArchivos((prev) => Math.max(0, prev - 1));
       }
+    }
+
+    // Si el aspirante reemplaza un archivo ya subido en un intento previo, permitir re-subirlo
+    const tipoBackendMap = { titulo: 'TITULO_GRADO', dni: 'DNI', cv: 'CV' };
+    if (tipoBackendMap[tipo]) {
+      setTiposSubidos((prev) => prev.filter((t) => t !== tipoBackendMap[tipo]));
     }
 
     // Si es válido, limpiamos el error y guardamos el archivo
@@ -528,6 +552,8 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   };
 
   const validatePaso3 = () => {
+    if (validandoArchivos > 0) return;
+
     const nuevosErrores = {};
     if (!archivos.titulo) nuevosErrores.titulo = 'La copia del título universitario es obligatoria';
     if (!archivos.dni) nuevosErrores.dni = 'La copia de DNI es obligatoria';
@@ -545,8 +571,9 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     setErrorEnvio(null);
     let creoSesionAhora = false;
     try {
-      // 0. Si el aspirante ingresó desde el acceso público sin sesión, registrarlo y autenticarlo
-      if (!authService.isAuthenticated()) {
+      // 0. Si el aspirante ingresó desde el acceso público sin sesión activa en este flujo, registrarlo y autenticarlo
+      if (requiereCuenta || (onVolverAlLogin && !sesionPublicaCreada)) {
+        authService.logout();
         await authService.registroAspirante({
           email: formData.email,
           password: formData.password,
@@ -556,10 +583,12 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         await authService.login(formData.email, formData.password);
         creoSesionAhora = true;
         setSesionPublicaCreada(true);
+        setRequiereCuenta(false);
       }
 
       // 1. Crear el legajo o reutilizar el existente en BORRADOR/OBSERVADO ante reintentos
       let legajoId = legajoIdEnCurso;
+      const yaSubidos = new Set(tiposSubidos);
       if (!legajoId) {
         try {
           const legajo = await inscripcionService.crearPreinscripcion(formData);
@@ -569,6 +598,13 @@ export default function Preinscripcion({ onVolverAlLogin }) {
             const existente = await inscripcionService.obtenerMiLegajo().catch(() => null);
             if (existente && ['BORRADOR', 'OBSERVADO'].includes(existente.estado)) {
               legajoId = existente.id;
+              const docsPrevios = await inscripcionService.obtenerDocumentos(legajoId).catch(() => []);
+              if (Array.isArray(docsPrevios)) {
+                docsPrevios.forEach((d) => {
+                  if (d?.tipo) yaSubidos.add(d.tipo);
+                });
+                setTiposSubidos(Array.from(yaSubidos));
+              }
             } else {
               throw err;
             }
@@ -580,7 +616,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       }
       console.log('Legajo listo para documentación. ID:', legajoId);
 
-      // 2. Subir los archivos PDF adjuntos asociados a este legajo
+      // 2. Subir solo los archivos PDF que aún no fueron registrados en intentos previos
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
         { archivo: archivos.dni, tipo: 'DNI' },
@@ -589,8 +625,10 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       ];
 
       for (const doc of documentosAEnviar) {
-        if (doc.archivo) {
+        if (doc.archivo && !yaSubidos.has(doc.tipo)) {
           await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
+          yaSubidos.add(doc.tipo);
+          setTiposSubidos(Array.from(yaSubidos));
           console.log(`Documento subido: ${doc.tipo}`);
         }
       }
@@ -602,6 +640,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       if (onVolverAlLogin && (sesionPublicaCreada || creoSesionAhora)) {
         authService.logout();
         setSesionPublicaCreada(false);
+        setRequiereCuenta(true);
       }
 
       setLegajoConfirmado({
@@ -611,6 +650,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         posgrado: formData.nombreCohorte || formData.posgrado,
       });
       setLegajoIdEnCurso(null);
+      setTiposSubidos([]);
       setPaso(5);
     } catch (error) {
       console.error('Error en el proceso de inscripción:', error);
@@ -625,7 +665,11 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       authService.logout();
       setSesionPublicaCreada(false);
     }
+    if (onVolverAlLogin) {
+      setRequiereCuenta(true);
+    }
     setLegajoIdEnCurso(null);
+    setTiposSubidos([]);
     setPaso(1);
     setLegajoConfirmado(null);
     setErrorEnvio(null);
@@ -660,6 +704,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       setSesionPublicaCreada(false);
     }
     setLegajoIdEnCurso(null);
+    setTiposSubidos([]);
     onVolverAlLogin();
   };
 
@@ -727,6 +772,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           <Paso3Documentacion
             archivos={archivos}
             erroresArchivos={erroresArchivos}
+            validandoArchivos={validandoArchivos > 0}
             onFileChange={handleFileChange}
             onPrev={() => setPaso(2)}
             onNext={validatePaso3}

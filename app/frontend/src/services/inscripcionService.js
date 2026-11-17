@@ -67,6 +67,16 @@ export const inscripcionService = {
   },
 
   /**
+   * Lista los documentos ya subidos a un legajo para evitar duplicados en reintentos
+   * Endpoint: GET /api/v1/legajos/{id}/documentos
+   */
+  obtenerDocumentos: async (legajoId) => {
+    return await request(`${API_URL}/legajos/${legajoId}/documentos`, {
+      method: 'GET',
+    });
+  },
+
+  /**
    * Envía los datos del aspirante a FastAPI para crear el legajo
    * Endpoint: POST /api/v1/legajos
    */
