@@ -62,6 +62,11 @@ class Legajo(Base):
     apellido: Mapped[str] = mapped_column(String(100), nullable=False)
     nombre: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    nacionalidad: Mapped[str | None] = mapped_column(String(100))
+    domicilio: Mapped[str | None] = mapped_column(String(255))
+    titulo: Mapped[str | None] = mapped_column(String(255))
+    universidad: Mapped[str | None] = mapped_column(String(255))
+    anio_egreso: Mapped[int | None] = mapped_column(Integer)
     estado: Mapped[str] = mapped_column(
         String(30),
         nullable=False,

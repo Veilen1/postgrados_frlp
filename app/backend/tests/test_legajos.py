@@ -74,6 +74,9 @@ def valid_payload(cohort_id: UUID, **overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "cohorte_id": str(cohort_id),
         "dni": "30123456",
+        "titulo": "Ingeniero en Sistemas",
+        "universidad": "UTN FRLP",
+        "anio_egreso": 2025,
         "solicita_beca": False,
     }
     payload.update(overrides)
@@ -128,7 +131,13 @@ async def test_create_legajo_uses_authenticated_profile_and_open_cohort(
 
     response = await client.post(
         "/api/v1/legajos",
-        json=valid_payload(cohort.id, solicita_beca=True, tipo_beca="50%"),
+        json=valid_payload(
+            cohort.id,
+            solicita_beca=True,
+            tipo_beca="50%",
+            nacionalidad="Argentina",
+            domicilio="La Plata",
+        ),
         headers=auth_header(user),
     )
 
@@ -141,6 +150,11 @@ async def test_create_legajo_uses_authenticated_profile_and_open_cohort(
     assert response.json()["email"] == user.email
     assert response.json()["estado"] == "BORRADOR"
     assert response.json()["tipo_beca"] == "50%"
+    assert response.json()["nacionalidad"] == "Argentina"
+    assert response.json()["domicilio"] == "La Plata"
+    assert response.json()["titulo"] == "Ingeniero en Sistemas"
+    assert response.json()["universidad"] == "UTN FRLP"
+    assert response.json()["anio_egreso"] == 2025
 
     async with test_session_factory() as session:
         history = list(
@@ -292,12 +306,23 @@ async def test_legajo_detail_and_update_enforce_ownership_and_state(
 
     updated = await client.put(
         f"/api/v1/legajos/{legajo['id']}",
-        json={"dni": "30123459", "email": "UPDATED@example.com"},
+        json={
+            "dni": "30123459",
+            "email": "UPDATED@example.com",
+            "nacionalidad": "Argentina",
+            "domicilio": "La Plata",
+            "titulo": "Ingeniero actualizado",
+            "universidad": "UTN",
+            "anio_egreso": 2024,
+        },
         headers=auth_header(owner),
     )
     assert updated.status_code == 200
     assert updated.json()["dni"] == "30123459"
     assert updated.json()["email"] == "updated@example.com"
+    assert updated.json()["titulo"] == "Ingeniero actualizado"
+    assert updated.json()["universidad"] == "UTN"
+    assert updated.json()["anio_egreso"] == 2024
 
     await upload_required_documents(
         test_session_factory,
@@ -357,6 +382,43 @@ async def test_sending_requires_both_documents_and_records_transition(
             ).all()
         )
     assert {transition.estado_nuevo for transition in transitions} == {"BORRADOR", "ENVIADO"}
+
+
+@pytest.mark.asyncio
+async def test_sending_requires_academic_profile_fields(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    user = await create_user(test_session_factory, email="profile@example.com")
+    cohort = await create_cohort(test_session_factory)
+    legajo = await post_legajo(client, user, cohort, titulo=None)
+    legajo_id = UUID(legajo["id"])
+    await upload_required_documents(test_session_factory, legajo_id, "DNI", "TITULO_GRADO")
+
+    incomplete = await client.post(
+        f"/api/v1/legajos/{legajo_id}/enviar",
+        headers=auth_header(user),
+    )
+    assert incomplete.status_code == 400
+    assert "Título de grado" in incomplete.json()["message"]
+
+    completed = await client.put(
+        f"/api/v1/legajos/{legajo_id}",
+        json={
+            "titulo": "Ingeniero en Sistemas",
+            "universidad": "UTN FRLP",
+            "anio_egreso": 2025,
+        },
+        headers=auth_header(user),
+    )
+    assert completed.status_code == 200
+
+    sent = await client.post(
+        f"/api/v1/legajos/{legajo_id}/enviar",
+        headers=auth_header(user),
+    )
+    assert sent.status_code == 200
+    assert sent.json()["estado"] == "ENVIADO"
 
 
 @pytest.mark.asyncio
