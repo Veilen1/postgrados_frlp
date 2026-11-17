@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 
 import Preinscripcion from './components/preinscripcion.jsx';
+import MiLegajo from './components/MiLegajo.jsx';
 import PanelDocente from './components/panelDocente.jsx';
+import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.jsx';
 import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
 import VistaPostgrados from './components/VistaPostgrados.jsx';
 import { VistaEstadisticas } from './components/VistaEstadisticas.jsx';
 import { authService } from './services/authService';
 
 // --- LOGIN ---
-function Login({ onLogin }) {
+function Login({ onLogin, onIrAPreinscripcion }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
@@ -40,8 +42,8 @@ function Login({ onLogin }) {
     setError('');
 
     try {
-      await authService.login(emailNormalizado, pass);
-      onLogin();
+      const session = await authService.login(emailNormalizado, pass);
+      onLogin(session.user);
     } catch (err) {
       if (err.status === 401) {
         setError('Credenciales inválidas. Verifique su correo institucional y contraseña.');
@@ -111,6 +113,20 @@ function Login({ onLogin }) {
         <p style={{marginTop: '20px', fontSize: '12px', color: '#666'}}>
           ¿Olvidó su contraseña? Contacte a soporte de Conducción.
         </p>
+
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e9ecef', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#495057' }}>
+            ¿Querés postularte a una carrera de posgrado?
+          </p>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={onIrAPreinscripcion}
+            style={{ width: '100%', padding: '10px 14px', fontSize: '13px', fontWeight: '600' }}
+          >
+            📝 Preinscribite acá como aspirante
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -118,37 +134,74 @@ function Login({ onLogin }) {
 
 // --- CONTENEDOR PRINCIPAL ---
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => authService.isAuthenticated());
+  const [usuarioActivo, setUsuarioActivo] = useState(() => authService.getUser());
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    () => authService.isAuthenticated() && Boolean(authService.getUser())
+  );
+  const [mostrarPreinscripcionPublica, setMostrarPreinscripcionPublica] = useState(false);
 
-  // Control de acceso según RBAC: sólo ADMIN_POSGRADO y SUPERADMIN acceden a conducción
-  const usuarioActivo = authService.getUser();
   const tienePermisoConduccion = ['ADMIN_POSGRADO', 'SUPERADMIN'].includes(usuarioActivo?.rol);
+  const esDocente = usuarioActivo?.rol === 'DOCENTE';
+  const puedeVerMiLegajo = ['ASPIRANTE', 'ALUMNO'].includes(usuarioActivo?.rol);
 
-  // Vista inicial inteligente: si no es admin, abrir preinscripción o docente según rol
+  // La persona aspirante/alumna comienza en su legajo; el docente y conducción tienen su panel.
   const vistaInicial = tienePermisoConduccion 
     ? 'inscripciones' 
-    : (usuarioActivo?.rol === 'DOCENTE' ? 'docente' : 'preinscripcion');
+    : (esDocente ? 'docente' : (puedeVerMiLegajo ? 'mi-legajo' : 'preinscripcion'));
 
   const [vista, setVista] = useState(vistaInicial);
+  const [legajoBuscado, setLegajoBuscado] = useState(null);
+  const [legajoInicial, setLegajoInicial] = useState(null);
+
+  const handleIrAEstudiante = (legajo) => {
+    setLegajoBuscado(legajo);
+    setVista('estudiante');
+  };
 
   const handleLogout = () => {
     authService.logout();
+    setUsuarioActivo(null);
     setIsLoggedIn(false);
+    setVista('preinscripcion');
+    setLegajoInicial(null);
   };
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    if (mostrarPreinscripcionPublica) {
+      return <Preinscripcion onVolverAlLogin={() => setMostrarPreinscripcionPublica(false)} />;
+    }
+    return (
+      <Login 
+        onLogin={(userLogueado) => {
+          setUsuarioActivo(userLogueado);
+          const esConduccion = ['ADMIN_POSGRADO', 'SUPERADMIN'].includes(userLogueado?.rol);
+          const esUsuarioAcademico = ['ASPIRANTE', 'ALUMNO'].includes(userLogueado?.rol);
+          setVista(
+            esConduccion
+              ? 'inscripciones'
+              : (userLogueado?.rol === 'DOCENTE' ? 'docente' : (esUsuarioAcademico ? 'mi-legajo' : 'preinscripcion'))
+          );
+          setIsLoggedIn(true);
+          setMostrarPreinscripcionPublica(false);
+        }} 
+        onIrAPreinscripcion={() => setMostrarPreinscripcionPublica(true)} 
+      />
+    );
   }
 
   // Barra de navegación con control de permisos RBAC
   const renderNav = () => (
     <nav className="demo-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px' }}>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button className={vista === 'preinscripcion' ? 'active' : ''} onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
-        <button className={vista === 'docente' ? 'active' : ''} onClick={() => setVista('docente')}>Docente</button>
+        {puedeVerMiLegajo && (
+          <button className={vista === 'mi-legajo' ? 'active' : ''} onClick={() => setVista('mi-legajo')}>Mi Legajo</button>
+        )}
+        {esDocente && (
+          <button className={vista === 'docente' ? 'active' : ''} onClick={() => setVista('docente')}>Docente</button>
+        )}
         {tienePermisoConduccion && (
           <button 
-            className={['inscripciones', 'posgrados', 'estadisticas'].includes(vista) ? 'active' : ''} 
+            className={['inscripciones', 'estudiante', 'posgrados', 'estadisticas'].includes(vista) ? 'active' : ''} 
             onClick={() => setVista('inscripciones')}
           >
             Equipo de Conducción
@@ -170,12 +223,57 @@ export default function App() {
     return (
       <>
         {renderNav()}
-        <Preinscripcion />
+        <Preinscripcion
+          initialLegajo={legajoInicial}
+          onVolverAMiLegajo={puedeVerMiLegajo ? () => setVista('mi-legajo') : undefined}
+        />
+      </>
+    );
+  }
+
+  if (vista === 'mi-legajo') {
+    if (!puedeVerMiLegajo) {
+      return (
+        <>
+          {renderNav()}
+          <div role="alert" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            No tiene permisos para visualizar este legajo.
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {renderNav()}
+        <MiLegajo
+          puedeIniciarPreinscripcion={usuarioActivo?.rol === 'ASPIRANTE'}
+          puedeEditar={usuarioActivo?.rol === 'ASPIRANTE'}
+          onIniciarPreinscripcion={() => {
+            setLegajoInicial(null);
+            setVista('preinscripcion');
+          }}
+          onCompletarLegajo={(datos) => {
+            setLegajoInicial(datos);
+            setVista('preinscripcion');
+          }}
+        />
       </>
     );
   }
   
   if (vista === 'docente') {
+    if (!esDocente) {
+      return (
+        <>
+          {renderNav()}
+          <div role="alert" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            No tiene permisos para visualizar el Panel Docente.
+          </div>
+        </>
+      );
+    }
+
     return (
       <>
         {renderNav()}
@@ -211,13 +309,15 @@ export default function App() {
           <div className="sidebar-logo">UTN</div>
           <ul>
             <li className={vista === 'inscripciones' ? 'active' : ''} onClick={() => setVista('inscripciones')}><span className="sidebar-icon">📋</span> Inscripciones</li>
+            <li className={vista === 'estudiante' ? 'active' : ''} onClick={() => setVista('estudiante')}><span className="sidebar-icon">👥</span> Estudiantes</li>
             <li className={vista === 'posgrados' ? 'active' : ''} onClick={() => setVista('posgrados')}><span className="sidebar-icon">🎓</span> Posgrados</li>
             <li className={vista === 'estadisticas' ? 'active' : ''} onClick={() => setVista('estadisticas')}><span className="sidebar-icon">📊</span> Estadisticas</li>
           </ul>
         </aside>
         <main className="main-content">
            <div className="panel-header">Panel de Equipo de conducción</div>
-           {vista === 'inscripciones' && <PanelConduccionInscripciones />}
+           {vista === 'inscripciones' && <PanelConduccionInscripciones onIrAEstudiante={handleIrAEstudiante} />}
+           {vista === 'estudiante' && <PanelConduccionEstudiante legajoInicial={legajoBuscado} />}
            {vista === 'posgrados' && <VistaPostgrados />}
            {vista === 'estadisticas' && <VistaEstadisticas />}
         </main>

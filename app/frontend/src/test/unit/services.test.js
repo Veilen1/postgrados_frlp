@@ -1,0 +1,383 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cohorteService } from '../../services/cohorteService';
+import { legajoService } from '../../services/legajoService';
+import { inscripcionService } from '../../services/inscripcionService';
+import { authService } from '../../services/authService';
+import { apiClient } from '../../services/apiClient';
+
+describe('cohorteService', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('obtenerCohortes invoca endpoint GET /cohortes', async () => {
+    const mockCohortes = [
+      { id: '1', nombre: 'Cohorte 2026', carrera: 'Maestría en Sistemas', abierta: true },
+    ];
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockCohortes,
+    });
+
+    const resultado = await cohorteService.obtenerCohortes();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/cohortes'),
+      expect.objectContaining({ method: 'GET' })
+    );
+    expect(resultado).toEqual(mockCohortes);
+  });
+
+  it('actualizarEstado envía PATCH con { abierta: true/false }', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'c1', abierta: true }),
+    });
+
+    const respuesta = await cohorteService.actualizarEstado('c1', true);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/cohortes/c1/estado'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ abierta: true }),
+      })
+    );
+    expect(respuesta.abierta).toBe(true);
+  });
+
+  it('crearCohorte envía POST con contrato oficial', async () => {
+    const payload = {
+      anio: 2026,
+      nombre: 'Cohorte 2026 - MISI',
+      carrera: 'Maestría en Sistemas',
+      codigo_carrera: 'MISI',
+      numero_cohorte: 1,
+      tipo_carrera: 'Maestria',
+      abierta: true,
+      fecha_inicio: '2026-04-01',
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'c-nueva', ...payload }),
+    });
+
+    const res = await cohorteService.crearCohorte(payload);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/cohortes'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    );
+    expect(res.id).toBe('c-nueva');
+    expect(res.codigo_carrera).toBe('MISI');
+  });
+});
+
+describe('legajoService', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('obtenerLegajos envía parámetros de paginación y filtros', async () => {
+    const mockPage = { items: [], total: 0, page: 1, page_size: 20 };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockPage,
+    });
+
+    await legajoService.obtenerLegajos({ page: 2, pageSize: 20, estado: 'PENDIENTE' });
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos?page=2&page_size=20&estado=PENDIENTE'),
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('actualizarEstadoLegajo envía estado y motivo de observación', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'l1', estado: 'OBSERVADO' }),
+    });
+
+    await legajoService.actualizarEstadoLegajo('l1', 'OBSERVADO', 'Falta título secundario');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos/l1/estado'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ estado: 'OBSERVADO', motivo_observacion: 'Falta título secundario' }),
+      })
+    );
+  });
+
+  it('obtenerDocumentosLegajo consulta documentos por id', async () => {
+    const mockDocs = [{ id: 'd1', tipo: 'DNI', nombre_original: 'dni.pdf' }];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockDocs,
+    });
+
+    const docs = await legajoService.obtenerDocumentosLegajo('l1');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos/l1/documentos'),
+      expect.objectContaining({ method: 'GET' })
+    );
+    expect(docs).toHaveLength(1);
+  });
+
+  it('descargarDocumento captura errores de conexión con mensaje claro', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(legajoService.descargarDocumento('d-1')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
+  });
+
+  it('descargarDocumento parsea el mensaje detail cuando la API devuelve error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify({ detail: 'Documento no encontrado o inaccesible' }),
+    });
+
+    await expect(legajoService.descargarDocumento('d-inexistente')).rejects.toThrow(
+      'Documento no encontrado o inaccesible'
+    );
+  });
+
+  it('obtenerUrlVisorDocumento captura errores de conexión con mensaje claro', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(legajoService.obtenerUrlVisorDocumento('d-1')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
+  });
+
+  it('obtenerUrlVisorDocumento parsea el detail de error devuelto por la API', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify({ detail: 'No tiene permisos para ver este documento' }),
+    });
+
+    await expect(legajoService.obtenerUrlVisorDocumento('d-prohibido')).rejects.toThrow(
+      'No tiene permisos para ver este documento'
+    );
+  });
+});
+
+describe('apiClient', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('captura TypeError / Failed to fetch y lanza error amigable con status 0', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(apiClient('/legajos')).rejects.toThrow(
+      'No se pudo conectar con el servidor de Posgrado. Verifique que el backend esté activo.'
+    );
+  });
+});
+
+describe('inscripcionService y authService', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('enviarLegajo invoca POST /legajos/{id}/enviar con token bearer', async () => {
+    localStorage.setItem('access_token', 'jwt-demo');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'l-1', estado: 'ENVIADO' }),
+    });
+
+    const res = await inscripcionService.enviarLegajo('l-1');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos/l-1/enviar'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer jwt-demo' }),
+      })
+    );
+    expect(res.estado).toBe('ENVIADO');
+  });
+
+  it('registroAspirante invoca POST /auth/registro-aspirante', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'u-1', email: 'asp@utn.edu.ar', rol: 'ASPIRANTE' }),
+    });
+
+    const user = await authService.registroAspirante({
+      email: ' asp@utn.edu.ar ',
+      password: 'PasswordSegura123',
+      nombre: 'Ana',
+      apellido: 'Lopez',
+    });
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/registro-aspirante'),
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(user.rol).toBe('ASPIRANTE');
+  });
+
+  it('login reemplaza el perfil anterior con el usuario devuelto por la API', async () => {
+    localStorage.setItem('user_profile', JSON.stringify({ rol: 'ADMIN_POSGRADO' }));
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        access_token: 'aspirante-token',
+        refresh_token: 'aspirante-refresh',
+        user: { id: 'u-2', email: 'asp@utn.edu.ar', rol: 'ASPIRANTE' },
+      }),
+    });
+
+    const session = await authService.login('asp@utn.edu.ar', 'password');
+
+    expect(session.user.rol).toBe('ASPIRANTE');
+    expect(JSON.parse(localStorage.getItem('user_profile')).rol).toBe('ASPIRANTE');
+  });
+
+  it('login elimina cualquier perfil anterior si la respuesta no trae usuario', async () => {
+    localStorage.setItem('access_token', 'old-admin-token');
+    localStorage.setItem('refresh_token', 'old-admin-refresh');
+    localStorage.setItem('user_profile', JSON.stringify({ rol: 'ADMIN_POSGRADO' }));
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        access_token: 'new-token',
+        refresh_token: 'new-refresh',
+      }),
+    });
+
+    await expect(authService.login('asp@utn.edu.ar', 'password')).rejects.toThrow(
+      'El backend devolvió una respuesta de autenticación incompleta.'
+    );
+    expect(localStorage.getItem('access_token')).toBeNull();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
+    expect(localStorage.getItem('user_profile')).toBeNull();
+  });
+
+  it('obtenerCohortes omite Authorization aunque exista token vencido en localStorage', async () => {
+    localStorage.setItem('access_token', 'token-vencido');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ id: 'c-1', nombre: 'Cohorte 2026', abierta: true }],
+    });
+
+    await inscripcionService.obtenerCohortes();
+    const [, fetchOptions] = globalThis.fetch.mock.calls[0];
+    expect(fetchOptions.headers?.Authorization).toBeUndefined();
+  });
+
+  it('obtenerMiLegajo invoca GET /legajos/mi-legajo con token bearer', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'l-9', estado: 'BORRADOR' }),
+    });
+
+    const legajo = await inscripcionService.obtenerMiLegajo();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos/mi-legajo'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({ Authorization: 'Bearer jwt-asp' }),
+      })
+    );
+    expect(legajo.id).toBe('l-9');
+  });
+
+  it('crearPreinscripcion envía los datos personales y académicos al backend', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'l-10' }),
+    });
+
+    await inscripcionService.crearPreinscripcion({
+      cohorte_id: 'c-1',
+      dni: '40111222',
+      nacionalidad: ' Argentina ',
+      domicilio: ' La Plata ',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anioEgreso: '2025',
+    });
+
+    const [, options] = globalThis.fetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      dni: '40111222',
+      cohorte_id: 'c-1',
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anio_egreso: 2025,
+      solicita_beca: false,
+      tipo_beca: null,
+    });
+  });
+
+  it('actualizarPreinscripcion invoca PUT /legajos/{id} y eliminarDocumento maneja 204', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'l-9', dni: '40111222' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+      });
+
+    const updated = await inscripcionService.actualizarPreinscripcion('l-9', {
+      dni: '40111222',
+      cohorte_id: 'c-1',
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anioEgreso: '2025',
+    });
+    expect(updated.dni).toBe('40111222');
+    expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toMatchObject({
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anio_egreso: 2025,
+    });
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/legajos/l-9'),
+      expect.objectContaining({ method: 'PUT' })
+    );
+
+    const delRes = await inscripcionService.eliminarDocumento('d-old');
+    expect(delRes).toBeNull();
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/documentos/d-old'),
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
+});

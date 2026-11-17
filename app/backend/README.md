@@ -86,6 +86,11 @@ El aspirante crea un borrador indicando una cohorte abierta y su DNI:
 {
   "cohorte_id": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
   "dni": "30123456",
+  "nacionalidad": "Argentina",
+  "domicilio": "La Plata",
+  "titulo": "Ingeniero en Sistemas",
+  "universidad": "UTN FRLP",
+  "anio_egreso": 2025,
   "solicita_beca": false,
   "tipo_beca": null
 }
@@ -93,6 +98,11 @@ El aspirante crea un borrador indicando una cohorte abierta y su DNI:
 
 El backend toma `usuario_id`, nombre, apellido y email del perfil autenticado; no acepta
 que el cliente suplante esos datos de identidad. Cada usuario puede crear un solo legajo.
+Los campos `nacionalidad`, `domicilio`, `titulo`, `universidad` y `anio_egreso` se guardan
+en el legajo. Son opcionales al crear/actualizar para mantener compatibilidad con borradores
+anteriores; antes de enviar el legajo, el backend exige título, universidad y año de egreso.
+Nacionalidad y domicilio son opcionales.
+La migración `0004_legajo_applicant_profile` agrega estas columnas en bases existentes.
 `PUT /api/v1/legajos/{legajo_id}` recibe uno o más campos editables del legajo y solo
 funciona para su titular mientras está en estado `BORRADOR` u `OBSERVADO`.
 
@@ -141,7 +151,7 @@ el `usuario_id`. La lista administrativa acepta `page` (1 en adelante), `page_si
 `cohorte_id` y `estado`. Los estados se registran en `auditoria_legajos`.
 
 La carga documental recibe multipart/form-data con campos `tipo` y `archivo`. Los tipos
-admitidos son `DNI`, `TITULO_GRADO`, `PARTIDA`, `CUIT_CUIL`, `FORM_INSCRIPCION`, `FORM_BECA`,
+admitidos son `DNI`, `TITULO_GRADO`, `ANALITICO`, `PARTIDA`, `CUIT_CUIL`, `FORM_INSCRIPCION`, `FORM_BECA`,
 `TITULO_POSGRADO` y `CV`. Solo se aceptan archivos con firma `%PDF` de hasta 5 MiB. El
 almacenamiento usa el volumen privado `STORAGE_PATH`, nunca una ruta ni nombre proporcionado
 por el cliente; el listado no expone rutas internas ni checksums. La carga y eliminación

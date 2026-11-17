@@ -58,24 +58,30 @@ async def create_legajo(
         apellido=user.apellido,
         nombre=user.nombre,
         email=user.email,
+        nacionalidad=payload.nacionalidad,
+        domicilio=payload.domicilio,
+        titulo=payload.titulo,
+        universidad=payload.universidad,
+        anio_egreso=payload.anio_egreso,
         estado=LegajoEstado.BORRADOR.value,
         solicita_beca=payload.solicita_beca,
         tipo_beca=payload.tipo_beca,
         cohorte=cohorte,
     )
     db.add(legajo)
-    db.add(
-        AuditoriaLegajo(
-            id=uuid4(),
-            legajo_id=legajo.id,
-            estado_anterior=None,
-            estado_nuevo=LegajoEstado.BORRADOR.value,
-            comentario="Creación del legajo",
-            usuario_id=user_id,
-        )
-    )
 
     try:
+        await db.flush()
+        db.add(
+            AuditoriaLegajo(
+                id=uuid4(),
+                legajo_id=legajo.id,
+                estado_anterior=None,
+                estado_nuevo=LegajoEstado.BORRADOR.value,
+                comentario="Creación del legajo",
+                usuario_id=user_id,
+            )
+        )
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -164,8 +170,20 @@ async def update_legajo(
         )
 
     changes = payload.model_dump(exclude_unset=True)
+    for field in ("dni", "nombre", "apellido", "email"):
+        if field in changes:
+            incoming = changes[field]
+            current = getattr(legajo, field)
+            if isinstance(incoming, str) and isinstance(current, str):
+                incoming = incoming.lower() if field == "email" else incoming
+                current = current.lower() if field == "email" else current
+            if incoming != current:
+                raise AuthenticationError(
+                    "Los datos de identidad están bloqueados en un legajo existente",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
     cohorte_id = changes.get("cohorte_id")
-    if cohorte_id is not None:
+    if cohorte_id is not None and cohorte_id != legajo.cohorte_id:
         legajo.cohorte = await _get_open_cohorte(db, cohorte_id)
     updated_cohorte_id = cohorte_id or legajo.cohorte_id
     updated_dni = changes.get("dni", legajo.dni)
@@ -196,6 +214,21 @@ async def send_legajo(db: AsyncSession, legajo: Legajo, user: User) -> Legajo:
     if legajo.estado not in {LegajoEstado.BORRADOR.value, LegajoEstado.OBSERVADO.value}:
         raise AuthenticationError(
             "Solo se pueden enviar legajos en estado BORRADOR u OBSERVADO",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    missing_profile_fields = [
+        label
+        for field, label in (
+            ("titulo", "Título de grado"),
+            ("universidad", "Universidad"),
+            ("anio_egreso", "Año de egreso"),
+        )
+        if not getattr(legajo, field)
+    ]
+    if missing_profile_fields:
+        raise AuthenticationError(
+            "Faltan datos académicos obligatorios: " + ", ".join(missing_profile_fields),
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 

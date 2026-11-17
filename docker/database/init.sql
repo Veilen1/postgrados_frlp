@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS documentos (
     legajo_id       UUID NOT NULL REFERENCES legajos(id) ON DELETE CASCADE,
     tipo            VARCHAR(50) NOT NULL
                     CONSTRAINT tipo_doc_valido CHECK (
-                        tipo IN ('DNI', 'TITULO_GRADO', 'PARTIDA', 'CUIT_CUIL',
+                        tipo IN ('DNI', 'TITULO_GRADO', 'ANALITICO', 'PARTIDA', 'CUIT_CUIL',
                                  'FORM_INSCRIPCION', 'FORM_BECA', 'TITULO_POSGRADO', 'CV')
                     ),
     path_storage    VARCHAR(500) NOT NULL, -- Ruta interna en volumen protegido
@@ -159,5 +159,17 @@ VALUES (
     'Juan',
     'Pérez',
     'ASPIRANTE',
+    true
+) ON CONFLICT (email) DO NOTHING;
+
+-- 7.4 Usuario Docente de Prueba (Password: 'Docente123!')
+INSERT INTO usuarios (id, email, password_hash, nombre, apellido, rol, activo)
+VALUES (
+    'd4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f70',
+    'docente.demo@posgrado.frlp.utn.edu.ar',
+    crypt('Docente123!', gen_salt('bf', 12)),
+    'Docente',
+    'Demo',
+    'DOCENTE',
     true
 ) ON CONFLICT (email) DO NOTHING;
