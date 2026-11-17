@@ -245,11 +245,15 @@ export default function VistaPostgrados() {
                   value={nuevaCohorte.carrera}
                   onChange={(e) => {
                     const carrera = e.target.value;
-                    setNuevaCohorte((prev) => ({
-                      ...prev,
-                      carrera,
-                      nombre: prev.nombre || (carrera ? `Cohorte ${prev.anio} - ${carrera}` : ''),
-                    }));
+                    setNuevaCohorte((prev) => {
+                      const nombreAnteriorSugerido = prev.carrera ? `Cohorte ${prev.anio} - ${prev.carrera}` : '';
+                      const debeSugerir = !prev.nombre || prev.nombre === nombreAnteriorSugerido;
+                      return {
+                        ...prev,
+                        carrera,
+                        nombre: debeSugerir ? (carrera ? `Cohorte ${prev.anio} - ${carrera}` : '') : prev.nombre,
+                      };
+                    });
                     setErrorCreacion('');
                   }}
                   disabled={creando}
@@ -304,7 +308,18 @@ export default function VistaPostgrados() {
                   max={2100}
                   className="form-control"
                   value={nuevaCohorte.anio}
-                  onChange={(e) => setNuevaCohorte((prev) => ({ ...prev, anio: parseInt(e.target.value, 10) || '' }))}
+                  onChange={(e) => {
+                    const anio = parseInt(e.target.value, 10) || '';
+                    setNuevaCohorte((prev) => {
+                      const nombreAnteriorSugerido = prev.carrera ? `Cohorte ${prev.anio} - ${prev.carrera}` : '';
+                      const debeSugerir = !prev.nombre || prev.nombre === nombreAnteriorSugerido;
+                      return {
+                        ...prev,
+                        anio,
+                        nombre: debeSugerir ? (prev.carrera ? `Cohorte ${anio} - ${prev.carrera}` : '') : prev.nombre,
+                      };
+                    });
+                  }}
                   disabled={creando}
                 />
               </div>
