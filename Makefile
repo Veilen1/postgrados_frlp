@@ -4,7 +4,7 @@
 # En Windows nativo (PowerShell/CMD), utilizar comandos docker compose directos.
 # =============================================================================
 
-.PHONY: help up down restart logs status test test-cov db-shell clean
+.PHONY: help up down restart logs status test test-cov db-shell seed-demo clean
 
 # Colorines para terminal
 CYAN  := \033[36m
@@ -38,6 +38,9 @@ test-cov: ## Ejecuta las pruebas con reporte de cobertura de código
 
 db-shell: ## Abre una terminal interactiva de PostgreSQL (psql)
 	docker compose exec db psql -U postgrado_user -d postgrado_dev
+
+seed-demo: ## Precarga cohortes, estudiantes, legajos y PDFs de demostración
+	docker compose exec backend python -m src.shared.seed_demo
 
 clean: ## Detiene contenedores y elimina volúmenes de datos (RESET COMPLETO)
 	docker compose down -v
