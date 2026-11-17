@@ -6,13 +6,14 @@ body { background-color: #f4f4f4; color: #333; }
 .utn-header h1 { font-size: 2rem; letter-spacing: 2px; }
 .utn-header h2 { font-size: 1.2rem; font-weight: 400; }
 
-.demo-nav { background: #333; padding: 10px; display: flex; justify-content: center; gap: 10px; }
+.demo-nav { background: #333; padding: 10px 16px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.demo-nav > div { flex-wrap: wrap; }
 .demo-nav button { padding: 8px 16px; cursor: pointer; border: none; background: #555; color: white; border-radius: 4px; font-weight: bold; }
 .demo-nav button:hover { background: #444; }
 .demo-nav button.active { background: #00539C; }
 
 /* Login */
-.login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #e0e0e0; }
+.login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #e0e0e0; padding: 16px; }
 .login-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 400px; text-align: center; }
 .login-card h1 { color: #00539C; margin-bottom: 5px; font-size: 2.5rem; letter-spacing: 2px;}
 .login-card h2 { color: #333; margin-bottom: 25px; font-size: 1.2rem; font-weight: normal;}
@@ -138,7 +139,7 @@ tbody tr:nth-child(even) { background: #f9f9f9; }
 .btn-reset { background: #ccc; color: #333; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
 .btn-reset:hover:not(:disabled) { background: #bbb; }
 .btn-reset:disabled { opacity: 0.6; cursor: not-allowed; }
-.table-responsive { overflow-x: auto; margin-top: 15px; }
+.table-responsive { overflow-x: auto; margin-top: 15px; width: 100%; -webkit-overflow-scrolling: touch; }
 .tabla-custom { width: 100%; border-collapse: collapse; background: white; }
 .tabla-custom th, .tabla-custom td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
 .tabla-custom th { background: #e0e0e0; font-weight: bold; color: #333; }
@@ -207,5 +208,66 @@ tbody tr:nth-child(even) { background: #f9f9f9; }
   .mi-legajo-documents-list li { align-items: flex-start; flex-direction: column; }
   .mi-legajo-edit-card .btn-primary { flex-basis: auto; width: 100%; max-width: none; }
   .mi-legajo-documents-list li strong { text-align: left; }
+}
+
+/* --- RESPONSIVE GLOBAL (TABLET & MOBILE 375px+) --- */
+@media (max-width: 900px) {
+  .conduccion-layout { flex-direction: column; min-height: auto; }
+  .sidebar { width: 100%; padding: 10px 0; }
+  .sidebar-logo { padding: 0 16px 10px; margin-bottom: 8px; font-size: 1.4rem; }
+  .sidebar ul { display: flex; overflow-x: auto; gap: 4px; padding: 0 10px; -webkit-overflow-scrolling: touch; }
+  .sidebar li { padding: 10px 14px; white-space: nowrap; flex: 0 0 auto; border-radius: 6px; font-size: 14px; }
+  .sidebar li.active { border-left: none; border-bottom: 3px solid white; }
+  .main-content { padding: 16px; width: 100%; min-width: 0; }
+  .panel-header { margin: -16px -16px 20px -16px; padding: 14px 16px; font-size: 1.2rem; }
+}
+
+@media (max-width: 768px) {
+  .utn-header { padding: 12px 16px; gap: 10px; flex-wrap: wrap; }
+  .utn-header h1 { font-size: 1.5rem; }
+  .utn-header h2 { font-size: 1rem; }
+
+  .preinscripcion-container { margin: 12px; padding: 18px 14px; }
+  .form-grid,
+  .resumen-grid { grid-template-columns: 1fr; gap: 14px; }
+  .form-group.full-width { grid-column: span 1; }
+
+  .docente-container { margin: 12px; padding: 16px; overflow-x: auto; }
+  .docente-actions { flex-direction: column; }
+  .docente-actions button { width: 100% !important; }
+
+  .panel-container,
+  .chart-section { padding: 16px; }
+  .panel-container .panel-header { flex-wrap: wrap; gap: 10px; }
+
+  .dashboard-stats { flex-direction: column; gap: 12px; }
+  .profile-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .tab { padding: 10px 16px; white-space: nowrap; font-size: 14px; }
+}
+
+@media (max-width: 640px) {
+  .demo-nav { padding: 10px 12px !important; }
+  .login-card { padding: 24px 18px; }
+  .login-card h1 { font-size: 2rem; }
+
+  .steps { gap: 8px; font-size: 13px; margin-bottom: 20px; }
+  .filtros-bar,
+  .filters-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+  .input-search,
+  .select-filter,
+  .btn-reset { width: 100%; min-width: 0; flex: 1 1 auto; }
+
+  .profile-info { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .avatar { width: 60px; height: 60px; font-size: 1.8rem; }
+  .status-indicators { width: 100%; justify-content: space-around; gap: 12px; }
+
+  .bar-row { flex-direction: column; align-items: stretch; gap: 6px; }
+  .bar-label { width: 100%; white-space: normal; }
+  .chart-container { gap: 12px; padding: 12px; overflow-x: auto; }
+
+  .posgrado-card { padding: 14px; }
+  .posgrado-header { flex-wrap: wrap; gap: 10px; }
+  .add-cohorte-row { flex-direction: column; align-items: stretch; }
 }
 

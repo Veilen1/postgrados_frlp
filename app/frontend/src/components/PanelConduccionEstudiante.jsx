@@ -81,6 +81,7 @@ export default function PanelConduccionEstudiante({ legajoInicial }) {
   const [documentos, setDocumentos] = useState([]);
   const [cargandoDocumentos, setCargandoDocumentos] = useState(false);
   const [descargandoId, setDescargandoId] = useState(null);
+  const [errorDescarga, setErrorDescarga] = useState(null);
 
   // 1. Cargar estudiantes reales desde la API de legajos
   const cargarEstudiantes = useCallback(async () => {
@@ -181,9 +182,10 @@ export default function PanelConduccionEstudiante({ legajoInicial }) {
   const handleDescargarDocumento = async (doc) => {
     try {
       setDescargandoId(doc.id);
+      setErrorDescarga(null);
       await legajoService.descargarDocumento(doc.id, doc.nombre_original || `${doc.tipo}.pdf`);
     } catch (err) {
-      alert(`No se pudo descargar el documento: ${err.message}`);
+      setErrorDescarga(`No se pudo descargar el documento: ${err.message}`);
     } finally {
       setDescargandoId(null);
     }

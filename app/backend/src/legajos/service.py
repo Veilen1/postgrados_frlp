@@ -69,7 +69,6 @@ async def create_legajo(
         cohorte=cohorte,
     )
     db.add(legajo)
-
     try:
         await db.flush()
         db.add(

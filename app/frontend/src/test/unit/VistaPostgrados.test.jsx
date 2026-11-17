@@ -36,9 +36,13 @@ describe('VistaPostgrados Component', () => {
     expect(screen.getByText('MISI-01')).toBeDefined();
     expect(screen.getByText(/Abierta/i)).toBeDefined();
 
-    // Clic en botón para cerrar período
+    // Clic en botón para cerrar período (abre modal accesible)
     const btnCerrar = screen.getByText('🔒 Cerrar');
     fireEvent.click(btnCerrar);
+
+    // Confirmar en el modal
+    const btnConfirmar = await screen.findByText('Confirmar Cierre');
+    fireEvent.click(btnConfirmar);
 
     await waitFor(() => {
       expect(cohorteService.actualizarEstado).toHaveBeenCalledWith('c-1', false);

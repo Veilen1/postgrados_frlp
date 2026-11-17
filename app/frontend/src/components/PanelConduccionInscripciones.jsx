@@ -268,27 +268,53 @@ export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
       );
       mostrarToast(`🔍 Legajo de ${nombre} pasado a En Revisión.`, 'info');
     } catch (err) {
-      alert(`Error al iniciar revisión del legajo: ${err.message}`);
+      mostrarToast(`Error al iniciar revisión del legajo: ${err.message}`, 'error');
     } finally {
       setProcesandoId(null);
     }
   };
 
-  const handleAprobar = async (row) => {
+  // Modal de confirmación para aprobación de legajo
+  const [modalAprobar, setModalAprobar] = useState({
+    open: false,
+    legajo: null,
+    submitting: false,
+  });
+
+  const handleAbrirModalAprobar = (row) => {
+    setModalAprobar({
+      open: true,
+      legajo: row,
+      submitting: false,
+    });
+  };
+
+  const handleCerrarModalAprobar = () => {
+    if (modalAprobar.submitting) return;
+    setModalAprobar({
+      open: false,
+      legajo: null,
+      submitting: false,
+    });
+  };
+
+  const handleConfirmarAprobacion = async () => {
+    if (!modalAprobar.legajo) return;
+    const row = modalAprobar.legajo;
     const nombre = formatearNombreAlumno(row);
-    if (!window.confirm(`¿Está seguro de APROBAR el legajo de ${nombre}? Se emitirá el número de legajo definitivo.`)) {
-      return;
-    }
 
     try {
+      setModalAprobar((prev) => ({ ...prev, submitting: true }));
       setProcesandoId(row.id);
       const legajoActualizado = await legajoService.actualizarEstadoLegajo(row.id, 'APROBADO');
       setInscripciones((prev) =>
         prev.map((item) => (item.id === row.id ? { ...item, ...legajoActualizado, estado: 'APROBADO' } : item))
       );
       mostrarToast(`✓ Legajo de ${nombre} aprobado exitosamente. N° de legajo: ${legajoActualizado.numero_legajo || 'Asignado'}`, 'success');
+      setModalAprobar({ open: false, legajo: null, submitting: false });
     } catch (err) {
-      alert(`Error al aprobar legajo: ${err.message}`);
+      mostrarToast(`Error al aprobar legajo: ${err.message}`, 'error');
+      setModalAprobar((prev) => ({ ...prev, submitting: false }));
     } finally {
       setProcesandoId(null);
     }
@@ -405,7 +431,7 @@ export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
       setModalDocs((prev) => ({ ...prev, descargandoId: doc.id }));
       await legajoService.descargarDocumento(doc.id, doc.nombre_original);
     } catch (err) {
-      alert(`Error al descargar el archivo: ${err.message}`);
+      mostrarToast(`Error al descargar el archivo: ${err.message}`, 'error');
     } finally {
       setModalDocs((prev) => ({ ...prev, descargandoId: null }));
     }
@@ -417,7 +443,7 @@ export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
       const url = await legajoService.obtenerUrlVisorDocumento(doc.id);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      alert(`Error al visualizar el archivo: ${err.message}`);
+      mostrarToast(`Error al visualizar el archivo: ${err.message}`, 'error');
     } finally {
       setModalDocs((prev) => ({ ...prev, descargandoId: null }));
     }
@@ -687,7 +713,7 @@ export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
                               alignItems: 'center',
                               gap: '4px',
                             }}
-                            onClick={() => handleAprobar(row)}
+                            onClick={() => handleAbrirModalAprobar(row)}
                             title="Aprobar legajo y emitir número oficial"
                           >
                             ✓ Aprobar
@@ -750,6 +776,165 @@ export const PanelConduccionInscripciones = ({ onIrAEstudiante }) => {
           </tbody>
         </table>
       </div>
+
+      {/* Modal accesible de Confirmación de Aprobación de Legajo */}
+      {modalAprobar.open && modalAprobar.legajo && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-aprobar-titulo"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '16px',
+            backdropFilter: 'blur(2px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !modalAprobar.submitting) {
+              handleCerrarModalAprobar();
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#f8f9fa',
+              }}
+            >
+              <h3
+                id="modal-aprobar-titulo"
+                style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  color: '#198754',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>✓</span> Confirmar Aprobación de Legajo
+              </h3>
+              <button
+                type="button"
+                onClick={handleCerrarModalAprobar}
+                disabled={modalAprobar.submitting}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '22px',
+                  cursor: modalAprobar.submitting ? 'not-allowed' : 'pointer',
+                  color: '#6c757d',
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+                aria-label="Cerrar modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 14px 0', fontSize: '15px', color: '#212529', lineHeight: '1.5' }}>
+                ¿Está seguro de <strong>aprobar</strong> el legajo de{' '}
+                <strong>{formatearNombreAlumno(modalAprobar.legajo)}</strong>?
+              </p>
+
+              <div
+                style={{
+                  backgroundColor: '#e8f4fd',
+                  borderLeft: '4px solid #0d6efd',
+                  padding: '12px 14px',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  color: '#0c5460',
+                  margin: '0 0 14px 0',
+                  lineHeight: '1.4',
+                }}
+              >
+                ℹ️ Al confirmar la aprobación, el sistema emitirá el <strong>número oficial de legajo</strong> definitivo y el postulante pasará automáticamente a ser <strong>ALUMNO</strong> regular.
+              </div>
+
+              <div style={{ fontSize: '13px', color: '#495057', display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
+                <div><strong>Carrera:</strong> {formatearPosgrado(modalAprobar.legajo.cohorte)}</div>
+                <div><strong>Cohorte:</strong> {formatearCohorte(modalAprobar.legajo.cohorte)}</div>
+                <div><strong>DNI:</strong> {modalAprobar.legajo.dni || 'Sin registrar'}</div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#f8f9fa',
+                borderTop: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleCerrarModalAprobar}
+                disabled={modalAprobar.submitting}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ced4da',
+                  backgroundColor: '#fff',
+                  borderRadius: '4px',
+                  cursor: modalAprobar.submitting ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  color: '#495057',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarAprobacion}
+                disabled={modalAprobar.submitting}
+                style={{
+                  padding: '8px 18px',
+                  border: 'none',
+                  backgroundColor: modalAprobar.submitting ? '#6c757d' : '#198754',
+                  color: '#fff',
+                  fontWeight: '600',
+                  borderRadius: '4px',
+                  cursor: modalAprobar.submitting ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {modalAprobar.submitting ? 'Emitiendo legajo...' : '✓ Confirmar Aprobación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal accesible de Observación de Legajo */}
       {modalObservar.open && modalObservar.legajo && (

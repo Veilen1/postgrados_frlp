@@ -70,16 +70,37 @@ export default function VistaPostgrados() {
     return Array.from(mapa.values());
   }, [cohortes]);
 
-  // Alternar apertura / cierre del período de inscripción (PATCH /api/v1/cohortes/{id}/estado)
-  const handleToggleEstado = async (cohorte) => {
-    const nuevoEstado = !cohorte.abierta;
-    const accionTexto = nuevoEstado ? 'ABRIR' : 'CERRAR';
+  // Modal de confirmación para alternar apertura / cierre de inscripción
+  const [modalConfirmarToggle, setModalConfirmarToggle] = useState({
+    open: false,
+    cohorte: null,
+    submitting: false,
+  });
 
-    if (!window.confirm(`¿Está seguro de ${accionTexto} el período de inscripción para "${cohorte.nombre}"?`)) {
-      return;
-    }
+  const handleAbrirModalToggle = (cohorte) => {
+    setModalConfirmarToggle({
+      open: true,
+      cohorte,
+      submitting: false,
+    });
+  };
+
+  const handleCerrarModalToggle = () => {
+    if (modalConfirmarToggle.submitting) return;
+    setModalConfirmarToggle({
+      open: false,
+      cohorte: null,
+      submitting: false,
+    });
+  };
+
+  const handleConfirmarToggle = async () => {
+    if (!modalConfirmarToggle.cohorte) return;
+    const cohorte = modalConfirmarToggle.cohorte;
+    const nuevoEstado = !cohorte.abierta;
 
     try {
+      setModalConfirmarToggle((prev) => ({ ...prev, submitting: true }));
       setProcesandoId(cohorte.id);
       const cohorteActualizada = await cohorteService.actualizarEstado(cohorte.id, nuevoEstado);
       setCohortes((prev) =>
@@ -89,8 +110,13 @@ export default function VistaPostgrados() {
         tipo: 'success',
         mensaje: `Período de inscripción para "${cohorte.nombre}" ahora está ${cohorteActualizada.abierta ? 'ABIERTO' : 'CERRADO'}.`,
       });
+      setModalConfirmarToggle({ open: false, cohorte: null, submitting: false });
     } catch (err) {
-      alert(`Error al actualizar estado de la cohorte: ${err.message}`);
+      setFeedback({
+        tipo: 'error',
+        mensaje: `Error al actualizar estado de la cohorte: ${err.message}`,
+      });
+      setModalConfirmarToggle((prev) => ({ ...prev, submitting: false }));
     } finally {
       setProcesandoId(null);
     }
@@ -554,7 +580,7 @@ export default function VistaPostgrados() {
                         <td style={{ padding: '10px', textAlign: 'center' }}>
                           <button
                             type="button"
-                            onClick={() => handleToggleEstado(c)}
+                            onClick={() => handleAbrirModalToggle(c)}
                             disabled={estaProcesando}
                             style={{
                               backgroundColor: c.abierta ? '#dc3545' : '#198754',
@@ -583,6 +609,157 @@ export default function VistaPostgrados() {
             </div>
           </div>
         ))
+      )}
+      {/* Modal accesible de confirmación para abrir/cerrar período */}
+      {modalConfirmarToggle.open && modalConfirmarToggle.cohorte && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-toggle-titulo"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '16px',
+            backdropFilter: 'blur(2px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !modalConfirmarToggle.submitting) {
+              handleCerrarModalToggle();
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#f8f9fa',
+              }}
+            >
+              <h3
+                id="modal-toggle-titulo"
+                style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  color: modalConfirmarToggle.cohorte.abierta ? '#dc3545' : '#198754',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>{modalConfirmarToggle.cohorte.abierta ? '🔒' : '🔓'}</span>{' '}
+                {modalConfirmarToggle.cohorte.abierta ? 'Cerrar Período de Inscripción' : 'Abrir Período de Inscripción'}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCerrarModalToggle}
+                disabled={modalConfirmarToggle.submitting}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '22px',
+                  cursor: modalConfirmarToggle.submitting ? 'not-allowed' : 'pointer',
+                  color: '#6c757d',
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+                aria-label="Cerrar modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 14px 0', fontSize: '15px', color: '#212529', lineHeight: '1.5' }}>
+                ¿Está seguro de que desea{' '}
+                <strong>{modalConfirmarToggle.cohorte.abierta ? 'cerrar' : 'abrir'}</strong> el período de preinscripción para:
+              </p>
+              <div style={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #0d6efd', padding: '12px 14px', borderRadius: '4px', fontSize: '13px', color: '#212529', marginBottom: '14px' }}>
+                <div><strong>Carrera:</strong> {modalConfirmarToggle.cohorte.carrera}</div>
+                <div><strong>Cohorte:</strong> {modalConfirmarToggle.cohorte.nombre}</div>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#6c757d' }}>
+                {modalConfirmarToggle.cohorte.abierta
+                  ? 'Al cerrar, los aspirantes ya no podrán seleccionar esta cohorte en el formulario público de preinscripción.'
+                  : 'Al abrir, la cohorte estará disponible de inmediato para que nuevos aspirantes postulen sus legajos.'}
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: '12px 20px',
+                backgroundColor: '#f8f9fa',
+                borderTop: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleCerrarModalToggle}
+                disabled={modalConfirmarToggle.submitting}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ced4da',
+                  backgroundColor: '#fff',
+                  borderRadius: '4px',
+                  cursor: modalConfirmarToggle.submitting ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  color: '#495057',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarToggle}
+                disabled={modalConfirmarToggle.submitting}
+                style={{
+                  padding: '8px 18px',
+                  border: 'none',
+                  backgroundColor: modalConfirmarToggle.cohorte.abierta ? '#dc3545' : '#198754',
+                  color: '#fff',
+                  fontWeight: '600',
+                  borderRadius: '4px',
+                  cursor: modalConfirmarToggle.submitting ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {modalConfirmarToggle.submitting
+                  ? 'Actualizando...'
+                  : modalConfirmarToggle.cohorte.abierta
+                  ? 'Confirmar Cierre'
+                  : 'Confirmar Apertura'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
