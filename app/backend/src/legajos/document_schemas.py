@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class TipoDocumento(StrEnum):
     DNI = "DNI"
     TITULO_GRADO = "TITULO_GRADO"
+    ANALITICO = "ANALITICO"
     PARTIDA = "PARTIDA"
     CUIT_CUIL = "CUIT_CUIL"
     FORM_INSCRIPCION = "FORM_INSCRIPCION"

@@ -15,17 +15,43 @@ function leerCabeceraPdf(file) {
   });
 }
 
-const Paso1DatosPersonales = ({ formData, handleChange, errores, requiereCuenta, onNext }) => (
+function agruparDocumentos(documentos = []) {
+  return documentos.reduce((resultado, documento) => {
+    if (!documento?.id || !documento?.tipo) return resultado;
+    const previo = resultado[documento.tipo] || { ids: [], nombres: [], sincronizado: true };
+    resultado[documento.tipo] = {
+      ids: [...previo.ids, documento.id],
+      nombres: [...previo.nombres, documento.nombre_original].filter(Boolean),
+      sincronizado: true,
+    };
+    return resultado;
+  }, {});
+}
+
+const Paso1DatosPersonales = ({
+  formData,
+  handleChange,
+  errores,
+  requiereCuenta,
+  identidadBloqueada,
+  onNext,
+}) => (
   <>
+    {identidadBloqueada && (
+      <p className="identity-readonly-note" role="note">
+        El DNI, el nombre, el apellido y el correo están vinculados a tu cuenta y no se pueden editar desde este legajo.
+        Si necesitás corregirlos, contactá a la Secretaría de Posgrado.
+      </p>
+    )}
     <div className="form-grid">
       <div className="form-group">
         <label>Apellido <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} className={`form-control ${errores.apellido ? 'error' : ''}`} />
+        <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.apellido ? 'error' : ''}`} />
         {errores.apellido && <span className="error-text">{errores.apellido}</span>}
       </div>
       <div className="form-group">
         <label>Nombre <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className={`form-control ${errores.nombre ? 'error' : ''}`} />
+        <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.nombre ? 'error' : ''}`} />
         {errores.nombre && <span className="error-text">{errores.nombre}</span>}
       </div>
       <div className="form-group">
@@ -34,12 +60,12 @@ const Paso1DatosPersonales = ({ formData, handleChange, errores, requiereCuenta,
       </div>
       <div className="form-group">
         <label>DNI/Pasaporte <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="dni" value={formData.dni} onChange={handleChange} className={`form-control ${errores.dni ? 'error' : ''}`} />
+        <input type="text" name="dni" value={formData.dni} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.dni ? 'error' : ''}`} />
         {errores.dni && <span className="error-text">{errores.dni}</span>}
       </div>
       <div className="form-group full-width">
         <label>Correo Electrónico <span style={{color: 'red'}}>*</span></label>
-        <input type="email" name="email" value={formData.email} onChange={handleChange} className={`form-control ${errores.email ? 'error' : ''}`} />
+        <input type="email" name="email" value={formData.email} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.email ? 'error' : ''}`} />
         {errores.email && <span className="error-text">{errores.email}</span>}
       </div>
       <div className="form-group full-width">
@@ -155,7 +181,15 @@ const Paso2DatosAcademicos = ({
   </>
 );
 
-const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFileChange, onPrev, onNext }) => (
+const Paso3Documentacion = ({
+  archivos,
+  documentosPorTipo,
+  erroresArchivos,
+  validandoArchivos,
+  onFileChange,
+  onPrev,
+  onNext,
+}) => (
   <>
     <div style={{background: '#fff3cd', padding: '15px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #ffc107'}}>
        <strong>Atención:</strong> Según el reglamento vigente, todos los archivos adjuntos deben estar exclusivamente en formato PDF y pesar menos de 5MB.
@@ -169,6 +203,7 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFi
           className={`form-control ${erroresArchivos?.titulo ? 'error' : ''}`}
           onChange={(e) => onFileChange('titulo', e)} 
         />
+        <EstadoDocumento archivo={archivos.titulo} documento={documentosPorTipo.TITULO_GRADO} />
         {erroresArchivos?.titulo && <span className="error-text">{erroresArchivos.titulo}</span>}
       </div>
       <div className="form-group">
@@ -179,6 +214,7 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFi
           className={`form-control ${erroresArchivos?.analitico ? 'error' : ''}`}
           onChange={(e) => onFileChange('analitico', e)} 
         />
+        <EstadoDocumento archivo={archivos.analitico} documento={documentosPorTipo.ANALITICO} />
         {erroresArchivos?.analitico && <span className="error-text">{erroresArchivos.analitico}</span>}
       </div>
       <div className="form-group">
@@ -189,6 +225,7 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFi
           className={`form-control ${erroresArchivos?.cv ? 'error' : ''}`}
           onChange={(e) => onFileChange('cv', e)} 
         />
+        <EstadoDocumento archivo={archivos.cv} documento={documentosPorTipo.CV} />
         {erroresArchivos?.cv && <span className="error-text">{erroresArchivos.cv}</span>}
       </div>
       <div className="form-group">
@@ -199,6 +236,7 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFi
           className={`form-control ${erroresArchivos?.dni ? 'error' : ''}`}
           onChange={(e) => onFileChange('dni', e)} 
         />
+        <EstadoDocumento archivo={archivos.dni} documento={documentosPorTipo.DNI} />
         {erroresArchivos?.dni && <span className="error-text">{erroresArchivos.dni}</span>}
       </div>
     </div>
@@ -216,7 +254,36 @@ const Paso3Documentacion = ({ archivos, erroresArchivos, validandoArchivos, onFi
   </>
 );
 
-const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConfirm }) => {
+const EstadoDocumento = ({ archivo, documento }) => {
+  if (archivo) {
+    return (
+      <span className="document-file-state document-file-state--selected">
+        {documento?.nombres?.[0] ? 'Se reemplazará el archivo actual por:' : 'Archivo listo para cargar:'}
+        {' '}{archivo.name}
+      </span>
+    );
+  }
+
+  if (documento?.nombres?.[0]) {
+    return (
+      <span className="document-file-state">
+        Documento actual: {documento.nombres[0]}. Si no seleccionás otro PDF, se conserva.
+      </span>
+    );
+  }
+
+  return null;
+};
+
+const Paso4Resumen = ({
+  formData,
+  archivos,
+  documentosPorTipo,
+  cargando,
+  errorEnvio,
+  onPrev,
+  onConfirm,
+}) => {
   const formatSize = (bytes) => {
     if (!bytes) return '';
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -248,6 +315,8 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
             <strong>Título de Grado:</strong>{' '}
             {archivos?.titulo ? (
               <span style={{ color: '#28a745' }}>📄 {archivos.titulo.name} ({formatSize(archivos.titulo.size)})</span>
+            ) : documentosPorTipo.TITULO_GRADO?.nombres?.[0] ? (
+              <span style={{ color: '#28a745' }}>📄 {documentosPorTipo.TITULO_GRADO.nombres[0]} (ya cargado)</span>
             ) : (
               <span style={{ color: '#dc3545' }}>No adjuntado</span>
             )}
@@ -256,6 +325,8 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
             <strong>Copia de DNI:</strong>{' '}
             {archivos?.dni ? (
               <span style={{ color: '#28a745' }}>📄 {archivos.dni.name} ({formatSize(archivos.dni.size)})</span>
+            ) : documentosPorTipo.DNI?.nombres?.[0] ? (
+              <span style={{ color: '#28a745' }}>📄 {documentosPorTipo.DNI.nombres[0]} (ya cargado)</span>
             ) : (
               <span style={{ color: '#dc3545' }}>No adjuntado</span>
             )}
@@ -264,6 +335,8 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
             <strong>Certificado Analítico:</strong>{' '}
             {archivos?.analitico ? (
               <span style={{ color: '#28a745' }}>📄 {archivos.analitico.name} ({formatSize(archivos.analitico.size)})</span>
+            ) : documentosPorTipo.ANALITICO?.nombres?.[0] ? (
+              <span style={{ color: '#28a745' }}>📄 {documentosPorTipo.ANALITICO.nombres[0]} (ya cargado)</span>
             ) : (
               <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
             )}
@@ -272,6 +345,8 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
             <strong>Curriculum Vitae:</strong>{' '}
             {archivos?.cv ? (
               <span style={{ color: '#28a745' }}>📄 {archivos.cv.name} ({formatSize(archivos.cv.size)})</span>
+            ) : documentosPorTipo.CV?.nombres?.[0] ? (
+              <span style={{ color: '#28a745' }}>📄 {documentosPorTipo.CV.nombres[0]} (ya cargado)</span>
             ) : (
               <span style={{ color: '#6c757d' }}>Opcional (no adjuntado)</span>
             )}
@@ -321,7 +396,7 @@ const Paso4Resumen = ({ formData, archivos, cargando, errorEnvio, onPrev, onConf
   );
 };
 
-const Paso5Exito = ({ legajoConfirmado, onReset }) => (
+const Paso5Exito = ({ legajoConfirmado, onReset, onVolverAMiLegajo }) => (
   <div style={{ textAlign: 'center', padding: '30px 20px' }}>
     <div style={{ fontSize: '3.5rem', marginBottom: '10px' }}>✅</div>
     <h2 style={{ color: '#28a745', marginBottom: '10px' }}>¡Preinscripción Registrada con Éxito!</h2>
@@ -356,19 +431,28 @@ const Paso5Exito = ({ legajoConfirmado, onReset }) => (
       ℹ️ La Secretaría de Posgrado auditará los documentos adjuntos y te notificará por correo electrónico ante cualquier novedad.
     </div>
 
-    <button className="btn-primary" style={{ minWidth: '220px' }} onClick={onReset}>
-      Iniciar Nueva Preinscripción
+    <button
+      className="btn-primary"
+      style={{ minWidth: '220px' }}
+      onClick={onVolverAMiLegajo || onReset}
+    >
+      {onVolverAMiLegajo ? 'Volver a Mi Legajo' : 'Iniciar Nueva Preinscripción'}
     </button>
   </div>
 );
 
-export default function Preinscripcion({ onVolverAlLogin }) {
+export default function Preinscripcion({
+  onVolverAlLogin,
+  initialLegajo,
+  onVolverAMiLegajo,
+}) {
+  const legajoPreexistente = initialLegajo?.legajo || null;
   const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState(null);
   const [legajoConfirmado, setLegajoConfirmado] = useState(null);
-  const [legajoIdEnCurso, setLegajoIdEnCurso] = useState(null);
-  const [docsPorTipo, setDocsPorTipo] = useState({});
+  const [legajoIdEnCurso, setLegajoIdEnCurso] = useState(legajoPreexistente?.id || null);
+  const [docsPorTipo, setDocsPorTipo] = useState(() => agruparDocumentos(initialLegajo?.documentos));
   const [validandoArchivos, setValidandoArchivos] = useState(0);
   const [sesionPublicaCreada, setSesionPublicaCreada] = useState(false);
   const [requiereCuenta, setRequiereCuenta] = useState(
@@ -390,19 +474,21 @@ export default function Preinscripcion({ onVolverAlLogin }) {
 
   const usuarioInicial = onVolverAlLogin ? null : authService.getUser();
   const [formData, setFormData] = useState({
-    nombre: usuarioInicial?.nombre || '',
-    apellido: usuarioInicial?.apellido || '',
-    nacionalidad: '',
-    dni: '',
-    email: usuarioInicial?.email || '',
-    domicilio: '',
+    nombre: legajoPreexistente?.nombre || usuarioInicial?.nombre || '',
+    apellido: legajoPreexistente?.apellido || usuarioInicial?.apellido || '',
+    nacionalidad: legajoPreexistente?.nacionalidad || '',
+    dni: legajoPreexistente?.dni || '',
+    email: legajoPreexistente?.email || usuarioInicial?.email || '',
+    domicilio: legajoPreexistente?.domicilio || '',
     password: '',
-    titulo: '',
-    universidad: '',
-    anioEgreso: '',
-    cohorte_id: '',
-    posgrado: '',
-    nombreCohorte: '',
+    titulo: legajoPreexistente?.titulo || '',
+    universidad: legajoPreexistente?.universidad || '',
+    anioEgreso: legajoPreexistente?.anio_egreso || '',
+    cohorte_id: legajoPreexistente?.cohorte_id || '',
+    posgrado: legajoPreexistente?.cohorte?.carrera || '',
+    nombreCohorte: legajoPreexistente?.cohorte?.nombre || '',
+    solicitaBeca: Boolean(legajoPreexistente?.solicita_beca),
+    tipoBeca: legajoPreexistente?.tipo_beca || '',
   });
 
   const cargarCohortes = useCallback(async () => {
@@ -410,7 +496,11 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       setCargandoCohortes(true);
       setErrorCohortes(null);
       const data = await inscripcionService.obtenerCohortes();
-      const lista = Array.isArray(data) ? data : [];
+      const lista = Array.isArray(data) ? [...data] : [];
+      const cohorteGuardada = legajoPreexistente?.cohorte;
+      if (cohorteGuardada && !lista.some((cohorte) => cohorte.id === cohorteGuardada.id)) {
+        lista.unshift(cohorteGuardada);
+      }
       setCohortes(lista);
       if (lista.length > 0) {
         setFormData((prev) => {
@@ -429,7 +519,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     } finally {
       setCargandoCohortes(false);
     }
-  }, []);
+  }, [legajoPreexistente]);
 
   useEffect(() => {
     cargarCohortes();
@@ -462,6 +552,21 @@ export default function Preinscripcion({ onVolverAlLogin }) {
 
     if (!file) {
       setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: '' }));
+      const tipoBackendMap = {
+        titulo: 'TITULO_GRADO',
+        dni: 'DNI',
+        cv: 'CV',
+        analitico: 'ANALITICO',
+      };
+      const tipoBackend = tipoBackendMap[tipo];
+      if (tipoBackend) {
+        setDocsPorTipo((prev) => {
+          const actual = prev[tipoBackend];
+          if (!actual) return prev;
+          return { ...prev, [tipoBackend]: { ...actual, sincronizado: true } };
+        });
+      }
       return;
     }
 
@@ -503,7 +608,12 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     }
 
     // Si el aspirante reemplaza un archivo ya subido en un intento previo, marcar para reemplazar en servidor
-    const tipoBackendMap = { titulo: 'TITULO_GRADO', dni: 'DNI', cv: 'CV' };
+    const tipoBackendMap = {
+      titulo: 'TITULO_GRADO',
+      dni: 'DNI',
+      cv: 'CV',
+      analitico: 'ANALITICO',
+    };
     const tipoBackend = tipoBackendMap[tipo];
     if (tipoBackend) {
       setDocsPorTipo((prev) => {
@@ -519,6 +629,9 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   };
 
   const handleChange = (e) => {
+    if (legajoPreexistente && ['dni', 'nombre', 'apellido', 'email'].includes(e.target.name)) {
+      return;
+    }
     setFormData({...formData, [e.target.name]: e.target.value});
     if(errores[e.target.name]) {
       setErrores({...errores, [e.target.name]: ''});
@@ -547,7 +660,9 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     const nuevosErrores = {};
     if(!formData.titulo) nuevosErrores.titulo = 'El título de grado es obligatorio';
     if(!formData.universidad) nuevosErrores.universidad = 'La universidad es obligatoria';
-    if(!formData.anioEgreso) nuevosErrores.anioEgreso = 'El año de egreso es obligatorio';
+    if(!formData.anioEgreso || !Number.isInteger(Number(formData.anioEgreso))) {
+      nuevosErrores.anioEgreso = 'Ingresá un año de egreso válido';
+    }
     if(!formData.cohorte_id) nuevosErrores.cohorte_id = 'Debe seleccionar una carrera de posgrado';
 
     if(Object.keys(nuevosErrores).length > 0) {
@@ -562,8 +677,10 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     if (validandoArchivos > 0) return;
 
     const nuevosErrores = {};
-    if (!archivos.titulo) nuevosErrores.titulo = 'La copia del título universitario es obligatoria';
-    if (!archivos.dni) nuevosErrores.dni = 'La copia de DNI es obligatoria';
+    const tieneTitulo = Boolean(archivos.titulo || docsPorTipo.TITULO_GRADO?.sincronizado);
+    const tieneDni = Boolean(archivos.dni || docsPorTipo.DNI?.sincronizado);
+    if (!tieneTitulo) nuevosErrores.titulo = 'La copia del título universitario es obligatoria';
+    if (!tieneDni) nuevosErrores.dni = 'La copia de DNI es obligatoria';
 
     if (Object.keys(nuevosErrores).length > 0) {
       setErroresArchivos(nuevosErrores);
@@ -604,21 +721,27 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           legajoId = legajo?.id || legajo?.legajo_id;
         } catch (err) {
           if (err.status === 409) {
-            const existente = await inscripcionService.obtenerMiLegajo().catch(() => null);
+            const existente = await inscripcionService.obtenerMiLegajo();
             if (existente && ['BORRADOR', 'OBSERVADO'].includes(existente.estado)) {
               legajoId = existente.id;
               await inscripcionService.actualizarPreinscripcion(legajoId, formData);
-              const docsPrevios = await inscripcionService.obtenerDocumentos(legajoId).catch(() => []);
-              if (Array.isArray(docsPrevios)) {
-                docsPrevios.forEach((d) => {
-                  if (!d?.tipo || !d?.id) return;
-                  const previo = mapaDocs[d.tipo] || { ids: [], sincronizado: false };
-                  if (!previo.ids.includes(d.id)) {
-                    mapaDocs[d.tipo] = { ids: [...previo.ids, d.id], sincronizado: false };
-                  }
-                });
-                setDocsPorTipo(mapaDocs);
+              const docsPrevios = await inscripcionService.obtenerDocumentos(legajoId);
+              if (!Array.isArray(docsPrevios)) {
+                throw new Error('No se pudo recuperar la documentación del legajo existente.');
               }
+              mapaDocs = { ...mapaDocs, ...agruparDocumentos(docsPrevios) };
+              const archivosPorTipo = {
+                TITULO_GRADO: archivos.titulo,
+                DNI: archivos.dni,
+                CV: archivos.cv,
+                ANALITICO: archivos.analitico,
+              };
+              for (const [tipo, archivo] of Object.entries(archivosPorTipo)) {
+                if (archivo && mapaDocs[tipo]) {
+                  mapaDocs[tipo] = { ...mapaDocs[tipo], sincronizado: false };
+                }
+              }
+              setDocsPorTipo(mapaDocs);
             } else {
               throw err;
             }
@@ -634,7 +757,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
         { archivo: archivos.dni, tipo: 'DNI' },
-        
+        { archivo: archivos.analitico, tipo: 'ANALITICO' },
         { archivo: archivos.cv, tipo: 'CV' },
       ];
 
@@ -652,7 +775,11 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         const creado = await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
         mapaDocs = {
           ...mapaDocs,
-          [doc.tipo]: { ids: creado?.id ? [creado.id] : [], sincronizado: true },
+          [doc.tipo]: {
+            ids: creado?.id ? [creado.id] : [],
+            nombres: [creado?.nombre_original || doc.archivo.name],
+            sincronizado: true,
+          },
         };
         setDocsPorTipo(mapaDocs);
         console.log(`Documento subido: ${doc.tipo}`);
@@ -737,13 +864,13 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     <div>
       <header className="utn-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1>UTN</h1><h2>Sistema de Posgrado - Preinscripción</h2>
+          <h1>UTN</h1><h2>{legajoPreexistente ? 'Completar mi legajo' : 'Sistema de Posgrado - Preinscripción'}</h2>
         </div>
-        {onVolverAlLogin && (
+          {(onVolverAlLogin || onVolverAMiLegajo) && (
           <button
             type="button"
             className="btn-secondary"
-            onClick={handleVolverAlLogin}
+              onClick={onVolverAMiLegajo || handleVolverAlLogin}
             style={{
               fontSize: '13px',
               padding: '8px 14px',
@@ -755,11 +882,32 @@ export default function Preinscripcion({ onVolverAlLogin }) {
               cursor: 'pointer',
             }}
           >
-            ← Volver al Inicio de Sesión
+            {onVolverAMiLegajo ? '← Volver a Mi Legajo' : '← Volver al Inicio de Sesión'}
           </button>
         )}
       </header>
       <div className="preinscripcion-container">
+        {legajoPreexistente?.estado === 'OBSERVADO' && (
+          <div
+            role="alert"
+            style={{
+              background: '#fff3cd',
+              color: '#664d03',
+              padding: '14px 18px',
+              borderRadius: '8px',
+              border: '1px solid #ffecb5',
+              marginBottom: '20px',
+            }}
+          >
+            <strong>Subsaná las observaciones de tu legajo</strong>
+            <p style={{ margin: '6px 0 0' }}>
+              {legajoPreexistente.motivo_observacion || 'Revisá y completá los datos y documentos pendientes.'}
+            </p>
+            <p style={{ margin: '6px 0 0' }}>
+              Podés corregir los datos y reemplazar únicamente los documentos observados; los demás se conservan.
+            </p>
+          </div>
+        )}
         <div className="steps">
           <span className={`step ${paso === 1 ? 'active' : (paso > 1 ? 'completed' : '')}`}><span className="circle">{paso > 1 ? '✓' : '1'}</span> Datos Personales</span>
           <span className={`step ${paso === 2 ? 'active' : (paso > 2 ? 'completed' : '')}`}>— <span className="circle">{paso > 2 ? '✓' : '2'}</span> Datos Academicos</span>
@@ -774,6 +922,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
             handleChange={handleChange}
             errores={errores}
             requiereCuenta={requiereCuenta}
+            identidadBloqueada={Boolean(legajoPreexistente)}
             onNext={validatePaso1}
           />
         )}
@@ -796,6 +945,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         {paso === 3 && (
           <Paso3Documentacion
             archivos={archivos}
+            documentosPorTipo={docsPorTipo}
             erroresArchivos={erroresArchivos}
             validandoArchivos={validandoArchivos > 0}
             onFileChange={handleFileChange}
@@ -808,6 +958,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           <Paso4Resumen
             formData={formData}
             archivos={archivos}
+            documentosPorTipo={docsPorTipo}
             cargando={cargando}
             errorEnvio={errorEnvio}
             onPrev={() => { setErrorEnvio(null); setPaso(3); }}
@@ -819,6 +970,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           <Paso5Exito
             legajoConfirmado={legajoConfirmado}
             onReset={handleReset}
+            onVolverAMiLegajo={onVolverAMiLegajo}
           />
         )}
       </div>

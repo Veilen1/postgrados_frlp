@@ -118,6 +118,26 @@ async def test_upload_validates_pdf_and_returns_safe_metadata(
 
 
 @pytest.mark.asyncio
+async def test_upload_accepts_analytic_certificate(
+    client: AsyncClient,
+    test_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    owner = await create_user(test_session_factory, email="analytic@example.com")
+    legajo = await create_legajo(test_session_factory, owner=owner)
+
+    metadata = await upload_document(
+        client,
+        legajo_id=legajo.id,
+        user=owner,
+        tipo="ANALITICO",
+        filename="analitico.pdf",
+    )
+
+    assert metadata["tipo"] == "ANALITICO"
+    assert metadata["nombre_original"] == "analitico.pdf"
+
+
+@pytest.mark.asyncio
 async def test_upload_rejects_non_pdf_and_oversized_content(
     client: AsyncClient,
     test_session_factory: async_sessionmaker[AsyncSession],

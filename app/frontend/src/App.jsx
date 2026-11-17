@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './App.css';
 
 import Preinscripcion from './components/preinscripcion.jsx';
+import MiLegajo from './components/MiLegajo.jsx';
 import PanelDocente from './components/panelDocente.jsx';
 import PanelConduccionEstudiante from './components/PanelConduccionEstudiante.jsx';
 import { PanelConduccionInscripciones } from './components/PanelConduccionInscripciones.jsx';
@@ -141,14 +142,16 @@ export default function App() {
 
   const tienePermisoConduccion = ['ADMIN_POSGRADO', 'SUPERADMIN'].includes(usuarioActivo?.rol);
   const esDocente = usuarioActivo?.rol === 'DOCENTE';
+  const puedeVerMiLegajo = ['ASPIRANTE', 'ALUMNO'].includes(usuarioActivo?.rol);
 
-  // Vista inicial inteligente: si no es admin, abrir preinscripción o docente según rol
+  // La persona aspirante/alumna comienza en su legajo; el docente y conducción tienen su panel.
   const vistaInicial = tienePermisoConduccion 
     ? 'inscripciones' 
-    : (usuarioActivo?.rol === 'DOCENTE' ? 'docente' : 'preinscripcion');
+    : (esDocente ? 'docente' : (puedeVerMiLegajo ? 'mi-legajo' : 'preinscripcion'));
 
   const [vista, setVista] = useState(vistaInicial);
   const [legajoBuscado, setLegajoBuscado] = useState(null);
+  const [legajoInicial, setLegajoInicial] = useState(null);
 
   const handleIrAEstudiante = (legajo) => {
     setLegajoBuscado(legajo);
@@ -160,6 +163,7 @@ export default function App() {
     setUsuarioActivo(null);
     setIsLoggedIn(false);
     setVista('preinscripcion');
+    setLegajoInicial(null);
   };
 
   if (!isLoggedIn) {
@@ -171,7 +175,12 @@ export default function App() {
         onLogin={(userLogueado) => {
           setUsuarioActivo(userLogueado);
           const esConduccion = ['ADMIN_POSGRADO', 'SUPERADMIN'].includes(userLogueado?.rol);
-          setVista(esConduccion ? 'inscripciones' : (userLogueado?.rol === 'DOCENTE' ? 'docente' : 'preinscripcion'));
+          const esUsuarioAcademico = ['ASPIRANTE', 'ALUMNO'].includes(userLogueado?.rol);
+          setVista(
+            esConduccion
+              ? 'inscripciones'
+              : (userLogueado?.rol === 'DOCENTE' ? 'docente' : (esUsuarioAcademico ? 'mi-legajo' : 'preinscripcion'))
+          );
           setIsLoggedIn(true);
           setMostrarPreinscripcionPublica(false);
         }} 
@@ -184,8 +193,8 @@ export default function App() {
   const renderNav = () => (
     <nav className="demo-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px' }}>
       <div style={{ display: 'flex', gap: '8px' }}>
-        {usuarioActivo?.rol === 'ASPIRANTE' && (
-          <button className={vista === 'preinscripcion' ? 'active' : ''} onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
+        {puedeVerMiLegajo && (
+          <button className={vista === 'mi-legajo' ? 'active' : ''} onClick={() => setVista('mi-legajo')}>Mi Legajo</button>
         )}
         {esDocente && (
           <button className={vista === 'docente' ? 'active' : ''} onClick={() => setVista('docente')}>Docente</button>
@@ -214,7 +223,41 @@ export default function App() {
     return (
       <>
         {renderNav()}
-        <Preinscripcion />
+        <Preinscripcion
+          initialLegajo={legajoInicial}
+          onVolverAMiLegajo={puedeVerMiLegajo ? () => setVista('mi-legajo') : undefined}
+        />
+      </>
+    );
+  }
+
+  if (vista === 'mi-legajo') {
+    if (!puedeVerMiLegajo) {
+      return (
+        <>
+          {renderNav()}
+          <div role="alert" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            No tiene permisos para visualizar este legajo.
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {renderNav()}
+        <MiLegajo
+          puedeIniciarPreinscripcion={usuarioActivo?.rol === 'ASPIRANTE'}
+          puedeEditar={usuarioActivo?.rol === 'ASPIRANTE'}
+          onIniciarPreinscripcion={() => {
+            setLegajoInicial(null);
+            setVista('preinscripcion');
+          }}
+          onCompletarLegajo={(datos) => {
+            setLegajoInicial(datos);
+            setVista('preinscripcion');
+          }}
+        />
       </>
     );
   }

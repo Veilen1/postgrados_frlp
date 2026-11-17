@@ -303,6 +303,38 @@ describe('inscripcionService y authService', () => {
     expect(legajo.id).toBe('l-9');
   });
 
+  it('crearPreinscripcion envía los datos personales y académicos al backend', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'l-10' }),
+    });
+
+    await inscripcionService.crearPreinscripcion({
+      cohorte_id: 'c-1',
+      dni: '40111222',
+      nacionalidad: ' Argentina ',
+      domicilio: ' La Plata ',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anioEgreso: '2025',
+    });
+
+    const [, options] = globalThis.fetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      dni: '40111222',
+      cohorte_id: 'c-1',
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anio_egreso: 2025,
+      solicita_beca: false,
+      tipo_beca: null,
+    });
+  });
+
   it('actualizarPreinscripcion invoca PUT /legajos/{id} y eliminarDocumento maneja 204', async () => {
     localStorage.setItem('access_token', 'jwt-asp');
     globalThis.fetch = vi
@@ -320,8 +352,20 @@ describe('inscripcionService y authService', () => {
     const updated = await inscripcionService.actualizarPreinscripcion('l-9', {
       dni: '40111222',
       cohorte_id: 'c-1',
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anioEgreso: '2025',
     });
     expect(updated.dni).toBe('40111222');
+    expect(JSON.parse(globalThis.fetch.mock.calls[0][1].body)).toMatchObject({
+      nacionalidad: 'Argentina',
+      domicilio: 'La Plata',
+      titulo: 'Ingeniero en Sistemas',
+      universidad: 'UTN FRLP',
+      anio_egreso: 2025,
+    });
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('/legajos/l-9'),
