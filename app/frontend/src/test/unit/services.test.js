@@ -302,4 +302,38 @@ describe('inscripcionService y authService', () => {
     );
     expect(legajo.id).toBe('l-9');
   });
+
+  it('actualizarPreinscripcion invoca PUT /legajos/{id} y eliminarDocumento maneja 204', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'l-9', dni: '40111222' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+      });
+
+    const updated = await inscripcionService.actualizarPreinscripcion('l-9', {
+      dni: '40111222',
+      cohorte_id: 'c-1',
+    });
+    expect(updated.dni).toBe('40111222');
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/legajos/l-9'),
+      expect.objectContaining({ method: 'PUT' })
+    );
+
+    const delRes = await inscripcionService.eliminarDocumento('d-old');
+    expect(delRes).toBeNull();
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/documentos/d-old'),
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
 });

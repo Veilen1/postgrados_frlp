@@ -368,16 +368,18 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const [errorEnvio, setErrorEnvio] = useState(null);
   const [legajoConfirmado, setLegajoConfirmado] = useState(null);
   const [legajoIdEnCurso, setLegajoIdEnCurso] = useState(null);
-  const [tiposSubidos, setTiposSubidos] = useState([]);
+  const [docsPorTipo, setDocsPorTipo] = useState({});
   const [validandoArchivos, setValidandoArchivos] = useState(0);
   const [sesionPublicaCreada, setSesionPublicaCreada] = useState(false);
-  const [requiereCuenta, setRequiereCuenta] = useState(() => {
-    if (onVolverAlLogin) {
+  const [requiereCuenta, setRequiereCuenta] = useState(
+    () => Boolean(onVolverAlLogin) || !authService.isAuthenticated()
+  );
+
+  useEffect(() => {
+    if (onVolverAlLogin && !sesionPublicaCreada && authService.isAuthenticated()) {
       authService.logout();
-      return true;
     }
-    return !authService.isAuthenticated();
-  });
+  }, [onVolverAlLogin, sesionPublicaCreada]);
   const [errores, setErrores] = useState({});
   const [erroresArchivos, setErroresArchivos] = useState({});
 
@@ -500,10 +502,15 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       }
     }
 
-    // Si el aspirante reemplaza un archivo ya subido en un intento previo, permitir re-subirlo
+    // Si el aspirante reemplaza un archivo ya subido en un intento previo, marcar para reemplazar en servidor
     const tipoBackendMap = { titulo: 'TITULO_GRADO', dni: 'DNI', cv: 'CV' };
-    if (tipoBackendMap[tipo]) {
-      setTiposSubidos((prev) => prev.filter((t) => t !== tipoBackendMap[tipo]));
+    const tipoBackend = tipoBackendMap[tipo];
+    if (tipoBackend) {
+      setDocsPorTipo((prev) => {
+        const actual = prev[tipoBackend];
+        if (!actual) return prev;
+        return { ...prev, [tipoBackend]: { ...actual, sincronizado: false } };
+      });
     }
 
     // Si es válido, limpiamos el error y guardamos el archivo
@@ -586,10 +593,12 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         setRequiereCuenta(false);
       }
 
-      // 1. Crear el legajo o reutilizar el existente en BORRADOR/OBSERVADO ante reintentos
+      // 1. Crear el legajo o reutilizar y actualizar el existente en BORRADOR/OBSERVADO
       let legajoId = legajoIdEnCurso;
-      const yaSubidos = new Set(tiposSubidos);
-      if (!legajoId) {
+      let mapaDocs = { ...docsPorTipo };
+      if (legajoId) {
+        await inscripcionService.actualizarPreinscripcion(legajoId, formData);
+      } else {
         try {
           const legajo = await inscripcionService.crearPreinscripcion(formData);
           legajoId = legajo?.id || legajo?.legajo_id;
@@ -598,12 +607,17 @@ export default function Preinscripcion({ onVolverAlLogin }) {
             const existente = await inscripcionService.obtenerMiLegajo().catch(() => null);
             if (existente && ['BORRADOR', 'OBSERVADO'].includes(existente.estado)) {
               legajoId = existente.id;
+              await inscripcionService.actualizarPreinscripcion(legajoId, formData);
               const docsPrevios = await inscripcionService.obtenerDocumentos(legajoId).catch(() => []);
               if (Array.isArray(docsPrevios)) {
                 docsPrevios.forEach((d) => {
-                  if (d?.tipo) yaSubidos.add(d.tipo);
+                  if (!d?.tipo || !d?.id) return;
+                  const previo = mapaDocs[d.tipo] || { ids: [], sincronizado: false };
+                  if (!previo.ids.includes(d.id)) {
+                    mapaDocs[d.tipo] = { ids: [...previo.ids, d.id], sincronizado: false };
+                  }
                 });
-                setTiposSubidos(Array.from(yaSubidos));
+                setDocsPorTipo(mapaDocs);
               }
             } else {
               throw err;
@@ -616,7 +630,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       }
       console.log('Legajo listo para documentación. ID:', legajoId);
 
-      // 2. Subir solo los archivos PDF que aún no fueron registrados en intentos previos
+      // 2. Subir archivos pendientes eliminando reemplazos previos para no duplicar documentos
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
         { archivo: archivos.dni, tipo: 'DNI' },
@@ -625,12 +639,23 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       ];
 
       for (const doc of documentosAEnviar) {
-        if (doc.archivo && !yaSubidos.has(doc.tipo)) {
-          await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
-          yaSubidos.add(doc.tipo);
-          setTiposSubidos(Array.from(yaSubidos));
-          console.log(`Documento subido: ${doc.tipo}`);
+        if (!doc.archivo) continue;
+        const estadoDoc = mapaDocs[doc.tipo];
+        if (estadoDoc?.sincronizado) continue;
+
+        if (estadoDoc?.ids?.length) {
+          for (const oldId of estadoDoc.ids) {
+            await inscripcionService.eliminarDocumento(oldId);
+          }
         }
+
+        const creado = await inscripcionService.subirDocumento(legajoId, doc.tipo, doc.archivo);
+        mapaDocs = {
+          ...mapaDocs,
+          [doc.tipo]: { ids: creado?.id ? [creado.id] : [], sincronizado: true },
+        };
+        setDocsPorTipo(mapaDocs);
+        console.log(`Documento subido: ${doc.tipo}`);
       }
 
       // 3. Enviar formalmente el legajo para que pase de BORRADOR a ENVIADO
@@ -650,7 +675,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
         posgrado: formData.nombreCohorte || formData.posgrado,
       });
       setLegajoIdEnCurso(null);
-      setTiposSubidos([]);
+      setDocsPorTipo({});
       setPaso(5);
     } catch (error) {
       console.error('Error en el proceso de inscripción:', error);
@@ -669,7 +694,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       setRequiereCuenta(true);
     }
     setLegajoIdEnCurso(null);
-    setTiposSubidos([]);
+    setDocsPorTipo({});
     setPaso(1);
     setLegajoConfirmado(null);
     setErrorEnvio(null);
@@ -704,7 +729,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       setSesionPublicaCreada(false);
     }
     setLegajoIdEnCurso(null);
-    setTiposSubidos([]);
+    setDocsPorTipo({});
     onVolverAlLogin();
   };
 

@@ -17,8 +17,13 @@ async function request(url, options = {}) {
   const response = await fetch(url, { ...fetchOptions, headers });
 
   if (!response.ok) {
-    // Si la sesión expiró o las credenciales no son válidas (401), mensaje amigable de UX
+    // Si la sesión expiró o las credenciales no son válidas (401), limpiar credenciales vencidas y avisar
     if (response.status === 401) {
+      if (!skipAuth) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_profile');
+      }
       const error = new Error('Tu sesión ha expirado o no has iniciado sesión. Por favor, iniciá sesión nuevamente para continuar.');
       error.status = 401;
       throw error;
@@ -39,6 +44,10 @@ async function request(url, options = {}) {
     const error = new Error(mensaje);
     error.status = response.status;
     throw error;
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   return await response.json();
@@ -120,6 +129,30 @@ export const inscripcionService = {
   },
 
   /**
+   * Actualiza un legajo existente en estado BORRADOR u OBSERVADO antes de reenviarlo
+   * Endpoint: PUT /api/v1/legajos/{id}
+   */
+  actualizarPreinscripcion: async (legajoId, datosAspirante) => {
+    const payload = {
+      ...(datosAspirante.dni ? { dni: String(datosAspirante.dni).trim() } : {}),
+      ...(datosAspirante.cohorte_id ? { cohorte_id: datosAspirante.cohorte_id } : {}),
+      ...(datosAspirante.nombre ? { nombre: String(datosAspirante.nombre).trim() } : {}),
+      ...(datosAspirante.apellido ? { apellido: String(datosAspirante.apellido).trim() } : {}),
+      ...(datosAspirante.email ? { email: String(datosAspirante.email).trim().toLowerCase() } : {}),
+      solicita_beca: Boolean(datosAspirante.solicitaBeca),
+      tipo_beca: datosAspirante.tipoBeca || null,
+    };
+
+    return await request(`${API_URL}/legajos/${legajoId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
    * Sube un archivo PDF al legajo creado
    * Endpoint: POST /api/v1/legajos/{id}/documentos
    */
@@ -132,6 +165,16 @@ export const inscripcionService = {
     return await request(`${API_URL}/legajos/${legajoId}/documentos`, {
       method: 'POST',
       body: formData,
+    });
+  },
+
+  /**
+   * Elimina un documento previo antes de subir su reemplazo
+   * Endpoint: DELETE /api/v1/documentos/{id}
+   */
+  eliminarDocumento: async (documentId) => {
+    return await request(`${API_URL}/documentos/${documentId}`, {
+      method: 'DELETE',
     });
   },
 
