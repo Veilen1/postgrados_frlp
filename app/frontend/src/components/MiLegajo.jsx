@@ -23,6 +23,36 @@ const TIPOS_DOCUMENTO = {
   ANALITICO: 'Certificado analítico',
 };
 
+const ESTADO_COLORES = {
+  BORRADOR: 'neutral',
+  PENDIENTE: 'info',
+  ENVIADO: 'info',
+  EN_REVISION: 'info',
+  OBSERVADO: 'warning',
+  APROBADO: 'success',
+  COMPLETADO: 'success',
+  ACTIVO: 'success',
+  VENCIDO: 'neutral',
+  RECHAZADO: 'danger',
+  BAJA: 'neutral',
+  GRADUADO: 'success',
+};
+
+const DESCRIPCIONES_ESTADO = {
+  BORRADOR: 'Tu legajo está guardado. Podés completar los datos pendientes y enviar la postulación.',
+  PENDIENTE: 'Tu postulación está pendiente de revisión.',
+  ENVIADO: 'Recibimos tu postulación; pronto comenzará la revisión.',
+  EN_REVISION: 'El Equipo de Conducción está revisando tus datos y documentos.',
+  OBSERVADO: 'Necesitamos que corrijas la información indicada y reenvíes tu legajo.',
+  APROBADO: 'Tu postulación fue aprobada.',
+  COMPLETADO: 'La revisión de tu legajo fue completada.',
+  ACTIVO: 'Tu legajo está activo.',
+  VENCIDO: 'El período de esta postulación venció.',
+  RECHAZADO: 'Tu postulación fue rechazada. Revisá el motivo informado abajo.',
+  BAJA: 'Este legajo se encuentra dado de baja.',
+  GRADUADO: 'Tu legajo registra la finalización de la carrera.',
+};
+
 const CAMPOS = [
   ['DNI / Pasaporte', 'dni', true],
   ['Correo electrónico', 'email', true],
@@ -101,7 +131,7 @@ export default function MiLegajo({
 
   if (!legajo) {
     return (
-      <main className="panel-container">
+      <main className="panel-container mi-legajo-view">
         <header className="panel-header">
           <div>
             <h2>Mi legajo</h2>
@@ -127,9 +157,10 @@ export default function MiLegajo({
 
   const editable = puedeEditar && ['BORRADOR', 'OBSERVADO'].includes(legajo.estado);
   const estadoVisible = ESTADOS[legajo.estado] || legajo.estado;
+  const estadoColor = ESTADO_COLORES[legajo.estado] || 'neutral';
 
   return (
-    <main className="panel-container">
+    <main className="panel-container mi-legajo-view">
       <header className="panel-header">
         <div>
           <h2>Mi legajo</h2>
@@ -140,17 +171,30 @@ export default function MiLegajo({
         )}
       </header>
 
-      <section className="resumen-box" aria-labelledby="estado-legajo">
-        <h3 id="estado-legajo">Estado de la postulación</h3>
-        <p><strong>{estadoVisible}</strong></p>
+      <section
+        className={`resumen-box mi-legajo-status-card mi-legajo-status-card--${estadoColor}`}
+        aria-labelledby="estado-legajo"
+      >
+        <div className="mi-legajo-status-heading">
+          <h3 id="estado-legajo">Estado de la postulación</h3>
+          <span
+            className={`mi-legajo-status-badge mi-legajo-status-badge--${estadoColor}`}
+            role="status"
+          >
+            {estadoVisible}
+          </span>
+        </div>
+        <p className="mi-legajo-status-description">
+          {DESCRIPCIONES_ESTADO[legajo.estado] || 'Consultá aquí el estado actual de tu legajo.'}
+        </p>
         {legajo.estado === 'OBSERVADO' && legajo.motivo_observacion && (
-          <div role="alert">
+          <div className="mi-legajo-feedback mi-legajo-feedback--warning" role="alert">
             <strong>Observación de la Secretaría:</strong>
             <p>{legajo.motivo_observacion}</p>
           </div>
         )}
         {legajo.estado === 'RECHAZADO' && legajo.motivo_observacion && (
-          <div role="alert">
+          <div className="mi-legajo-feedback mi-legajo-feedback--danger" role="alert">
             <strong>Motivo del rechazo:</strong>
             <p>{legajo.motivo_observacion}</p>
           </div>
@@ -182,10 +226,11 @@ export default function MiLegajo({
         {documentos.length === 0 ? (
           <p>No hay documentos cargados.</p>
         ) : (
-          <ul>
+          <ul className="mi-legajo-documents-list">
             {documentos.map((documento) => (
               <li key={documento.id}>
-                {TIPOS_DOCUMENTO[documento.tipo] || documento.tipo}: {documento.nombre_original}
+                <span>{TIPOS_DOCUMENTO[documento.tipo] || documento.tipo}</span>
+                <strong>{documento.nombre_original}</strong>
               </li>
             ))}
           </ul>
@@ -193,13 +238,22 @@ export default function MiLegajo({
       </section>
 
       {editable && (
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => onCompletarLegajo({ legajo, documentos })}
-        >
-          {legajo.estado === 'OBSERVADO' ? 'Corregir y reenviar' : 'Completar mi legajo'}
-        </button>
+        <section className="mi-legajo-edit-card" aria-label="Editar postulación">
+          <div>
+            <h3>{legajo.estado === 'OBSERVADO' ? '¿Tenés que corregir algo?' : '¿Querés continuar tu legajo?'}</h3>
+            <p>
+              Podés editar los datos académicos y personales permitidos, y reemplazar los documentos necesarios.
+              Los archivos que no cambies se conservan.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => onCompletarLegajo({ legajo, documentos })}
+          >
+            {legajo.estado === 'OBSERVADO' ? 'Corregir y reenviar' : 'Completar mi legajo'}
+          </button>
+        </section>
       )}
     </main>
   );

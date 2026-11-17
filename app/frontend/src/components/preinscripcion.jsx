@@ -28,17 +28,30 @@ function agruparDocumentos(documentos = []) {
   }, {});
 }
 
-const Paso1DatosPersonales = ({ formData, handleChange, errores, requiereCuenta, onNext }) => (
+const Paso1DatosPersonales = ({
+  formData,
+  handleChange,
+  errores,
+  requiereCuenta,
+  identidadBloqueada,
+  onNext,
+}) => (
   <>
+    {identidadBloqueada && (
+      <p className="identity-readonly-note" role="note">
+        El DNI, el nombre, el apellido y el correo están vinculados a tu cuenta y no se pueden editar desde este legajo.
+        Si necesitás corregirlos, contactá a la Secretaría de Posgrado.
+      </p>
+    )}
     <div className="form-grid">
       <div className="form-group">
         <label>Apellido <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} className={`form-control ${errores.apellido ? 'error' : ''}`} />
+        <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.apellido ? 'error' : ''}`} />
         {errores.apellido && <span className="error-text">{errores.apellido}</span>}
       </div>
       <div className="form-group">
         <label>Nombre <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} className={`form-control ${errores.nombre ? 'error' : ''}`} />
+        <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.nombre ? 'error' : ''}`} />
         {errores.nombre && <span className="error-text">{errores.nombre}</span>}
       </div>
       <div className="form-group">
@@ -47,12 +60,12 @@ const Paso1DatosPersonales = ({ formData, handleChange, errores, requiereCuenta,
       </div>
       <div className="form-group">
         <label>DNI/Pasaporte <span style={{color: 'red'}}>*</span></label>
-        <input type="text" name="dni" value={formData.dni} onChange={handleChange} className={`form-control ${errores.dni ? 'error' : ''}`} />
+        <input type="text" name="dni" value={formData.dni} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.dni ? 'error' : ''}`} />
         {errores.dni && <span className="error-text">{errores.dni}</span>}
       </div>
       <div className="form-group full-width">
         <label>Correo Electrónico <span style={{color: 'red'}}>*</span></label>
-        <input type="email" name="email" value={formData.email} onChange={handleChange} className={`form-control ${errores.email ? 'error' : ''}`} />
+        <input type="email" name="email" value={formData.email} onChange={handleChange} readOnly={identidadBloqueada} className={`form-control ${errores.email ? 'error' : ''}`} />
         {errores.email && <span className="error-text">{errores.email}</span>}
       </div>
       <div className="form-group full-width">
@@ -190,9 +203,7 @@ const Paso3Documentacion = ({
           className={`form-control ${erroresArchivos?.titulo ? 'error' : ''}`}
           onChange={(e) => onFileChange('titulo', e)} 
         />
-        {!archivos.titulo && documentosPorTipo.TITULO_GRADO?.nombres?.[0] && (
-          <span>Ya cargado: {documentosPorTipo.TITULO_GRADO.nombres[0]}</span>
-        )}
+        <EstadoDocumento archivo={archivos.titulo} documento={documentosPorTipo.TITULO_GRADO} />
         {erroresArchivos?.titulo && <span className="error-text">{erroresArchivos.titulo}</span>}
       </div>
       <div className="form-group">
@@ -203,6 +214,7 @@ const Paso3Documentacion = ({
           className={`form-control ${erroresArchivos?.analitico ? 'error' : ''}`}
           onChange={(e) => onFileChange('analitico', e)} 
         />
+        <EstadoDocumento archivo={archivos.analitico} documento={documentosPorTipo.ANALITICO} />
         {erroresArchivos?.analitico && <span className="error-text">{erroresArchivos.analitico}</span>}
       </div>
       <div className="form-group">
@@ -213,6 +225,7 @@ const Paso3Documentacion = ({
           className={`form-control ${erroresArchivos?.cv ? 'error' : ''}`}
           onChange={(e) => onFileChange('cv', e)} 
         />
+        <EstadoDocumento archivo={archivos.cv} documento={documentosPorTipo.CV} />
         {erroresArchivos?.cv && <span className="error-text">{erroresArchivos.cv}</span>}
       </div>
       <div className="form-group">
@@ -223,9 +236,7 @@ const Paso3Documentacion = ({
           className={`form-control ${erroresArchivos?.dni ? 'error' : ''}`}
           onChange={(e) => onFileChange('dni', e)} 
         />
-        {!archivos.dni && documentosPorTipo.DNI?.nombres?.[0] && (
-          <span>Ya cargado: {documentosPorTipo.DNI.nombres[0]}</span>
-        )}
+        <EstadoDocumento archivo={archivos.dni} documento={documentosPorTipo.DNI} />
         {erroresArchivos?.dni && <span className="error-text">{erroresArchivos.dni}</span>}
       </div>
     </div>
@@ -242,6 +253,27 @@ const Paso3Documentacion = ({
     </div>
   </>
 );
+
+const EstadoDocumento = ({ archivo, documento }) => {
+  if (archivo) {
+    return (
+      <span className="document-file-state document-file-state--selected">
+        {documento?.nombres?.[0] ? 'Se reemplazará el archivo actual por:' : 'Archivo listo para cargar:'}
+        {' '}{archivo.name}
+      </span>
+    );
+  }
+
+  if (documento?.nombres?.[0]) {
+    return (
+      <span className="document-file-state">
+        Documento actual: {documento.nombres[0]}. Si no seleccionás otro PDF, se conserva.
+      </span>
+    );
+  }
+
+  return null;
+};
 
 const Paso4Resumen = ({
   formData,
@@ -520,6 +552,21 @@ export default function Preinscripcion({
 
     if (!file) {
       setArchivos((prev) => ({ ...prev, [tipo]: null }));
+      setErroresArchivos((prev) => ({ ...prev, [tipo]: '' }));
+      const tipoBackendMap = {
+        titulo: 'TITULO_GRADO',
+        dni: 'DNI',
+        cv: 'CV',
+        analitico: 'ANALITICO',
+      };
+      const tipoBackend = tipoBackendMap[tipo];
+      if (tipoBackend) {
+        setDocsPorTipo((prev) => {
+          const actual = prev[tipoBackend];
+          if (!actual) return prev;
+          return { ...prev, [tipoBackend]: { ...actual, sincronizado: true } };
+        });
+      }
       return;
     }
 
@@ -561,7 +608,12 @@ export default function Preinscripcion({
     }
 
     // Si el aspirante reemplaza un archivo ya subido en un intento previo, marcar para reemplazar en servidor
-    const tipoBackendMap = { titulo: 'TITULO_GRADO', dni: 'DNI', cv: 'CV' };
+    const tipoBackendMap = {
+      titulo: 'TITULO_GRADO',
+      dni: 'DNI',
+      cv: 'CV',
+      analitico: 'ANALITICO',
+    };
     const tipoBackend = tipoBackendMap[tipo];
     if (tipoBackend) {
       setDocsPorTipo((prev) => {
@@ -577,6 +629,9 @@ export default function Preinscripcion({
   };
 
   const handleChange = (e) => {
+    if (legajoPreexistente && ['dni', 'nombre', 'apellido', 'email'].includes(e.target.name)) {
+      return;
+    }
     setFormData({...formData, [e.target.name]: e.target.value});
     if(errores[e.target.name]) {
       setErrores({...errores, [e.target.name]: ''});
@@ -679,6 +734,7 @@ export default function Preinscripcion({
                 TITULO_GRADO: archivos.titulo,
                 DNI: archivos.dni,
                 CV: archivos.cv,
+                ANALITICO: archivos.analitico,
               };
               for (const [tipo, archivo] of Object.entries(archivosPorTipo)) {
                 if (archivo && mapaDocs[tipo]) {
@@ -701,7 +757,7 @@ export default function Preinscripcion({
       const documentosAEnviar = [
         { archivo: archivos.titulo, tipo: 'TITULO_GRADO' },
         { archivo: archivos.dni, tipo: 'DNI' },
-        
+        { archivo: archivos.analitico, tipo: 'ANALITICO' },
         { archivo: archivos.cv, tipo: 'CV' },
       ];
 
@@ -866,6 +922,7 @@ export default function Preinscripcion({
             handleChange={handleChange}
             errores={errores}
             requiereCuenta={requiereCuenta}
+            identidadBloqueada={Boolean(legajoPreexistente)}
             onNext={validatePaso1}
           />
         )}

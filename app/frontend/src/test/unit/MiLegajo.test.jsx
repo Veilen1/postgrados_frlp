@@ -61,6 +61,29 @@ describe('MiLegajo', () => {
     await waitFor(() => {
       expect(screen.getByText('Falta corregir el año de egreso')).toBeDefined();
     });
+    expect(screen.getByRole('status').className).toContain('mi-legajo-status-badge--warning');
     expect(screen.getByRole('button', { name: 'Corregir y reenviar' })).toBeDefined();
+  });
+
+  it.each([
+    ['APROBADO', 'mi-legajo-status-badge--success'],
+    ['RECHAZADO', 'mi-legajo-status-badge--danger'],
+    ['BORRADOR', 'mi-legajo-status-badge--neutral'],
+  ])('aplica la clase visual correspondiente al estado %s', async (estado, claseEsperada) => {
+    vi.spyOn(inscripcionService, 'obtenerMiLegajo').mockResolvedValue({
+      id: `leg-${estado.toLowerCase()}`,
+      estado,
+      motivo_observacion: estado === 'RECHAZADO' ? 'La documentación no cumple los requisitos.' : undefined,
+    });
+    vi.spyOn(inscripcionService, 'obtenerDocumentos').mockResolvedValue([]);
+
+    render(<MiLegajo onIniciarPreinscripcion={vi.fn()} onCompletarLegajo={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status').className).toContain(claseEsperada);
+    });
+    if (estado === 'RECHAZADO') {
+      expect(screen.getByText('La documentación no cumple los requisitos.')).toBeDefined();
+    }
   });
 });

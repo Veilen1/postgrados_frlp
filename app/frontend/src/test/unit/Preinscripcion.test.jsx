@@ -223,6 +223,11 @@ describe('Preinscripcion Component', () => {
     );
 
     expect(container.querySelector('input[name="dni"]').value).toBe('40123456');
+    expect(container.querySelector('input[name="dni"]').readOnly).toBe(true);
+    expect(container.querySelector('input[name="nombre"]').readOnly).toBe(true);
+    expect(container.querySelector('input[name="apellido"]').readOnly).toBe(true);
+    expect(container.querySelector('input[name="email"]').readOnly).toBe(true);
+    expect(container.querySelector('input[name="domicilio"]').readOnly).toBe(false);
     fireEvent.click(screen.getByText('Continuar a Datos Académicos'));
     await waitFor(() => {
       expect(container.querySelector('input[name="titulo"]').value).toBe('Ingeniero en Sistemas');
@@ -232,7 +237,7 @@ describe('Preinscripcion Component', () => {
 
     fireEvent.click(screen.getByText('Continuar a Documentación'));
     await waitFor(() => {
-      expect(screen.getByText('Ya cargado: titulo.pdf')).toBeDefined();
+      expect(screen.getByText(/Documento actual: titulo\.pdf/)).toBeDefined();
     });
     fireEvent.click(screen.getByText('Generar Resumen de Legajo'));
 
@@ -294,6 +299,7 @@ describe('Preinscripcion Component', () => {
       },
       documentos: [
         { id: 'doc-titulo-anterior', tipo: 'TITULO_GRADO', nombre_original: 'titulo-anterior.pdf' },
+        { id: 'doc-analitico-anterior', tipo: 'ANALITICO', nombre_original: 'analitico-anterior.pdf' },
         { id: 'doc-dni', tipo: 'DNI', nombre_original: 'dni.pdf' },
       ],
     };
@@ -313,16 +319,26 @@ describe('Preinscripcion Component', () => {
     fireEvent.click(screen.getByText('Continuar a Documentación'));
 
     await waitFor(() => {
-      expect(screen.getByText('Ya cargado: titulo-anterior.pdf')).toBeDefined();
+      expect(screen.getByText(/Documento actual: titulo-anterior\.pdf/)).toBeDefined();
     });
-    const titleInput = container.querySelectorAll('input[type="file"]')[0];
-    fireEvent.change(titleInput, {
+    await waitFor(() => {
+      expect(screen.getByText(/Documento actual: analitico-anterior\.pdf/)).toBeDefined();
+    });
+    const fileInputs = container.querySelectorAll('input[type="file"]');
+    fireEvent.change(fileInputs[0], {
       target: {
         files: [new File(['%PDF-1.4 corregido'], 'titulo-corregido.pdf', { type: 'application/pdf' })],
       },
     });
+    fireEvent.change(fileInputs[1], {
+      target: {
+        files: [new File(['%PDF-1.4 corregido'], 'analitico-corregido.pdf', { type: 'application/pdf' })],
+      },
+    });
     await waitFor(() => {
-      expect(screen.queryByText('Ya cargado: titulo-anterior.pdf')).toBeNull();
+      expect(screen.queryByText(/Documento actual: titulo-anterior\.pdf/)).toBeNull();
+      expect(screen.queryByText(/Documento actual: analitico-anterior\.pdf/)).toBeNull();
+      expect(screen.getByText(/Se reemplazará el archivo actual por: analitico-corregido\.pdf/)).toBeDefined();
     });
     fireEvent.click(screen.getByText('Generar Resumen de Legajo'));
 
@@ -337,13 +353,19 @@ describe('Preinscripcion Component', () => {
     expect(actualizarSpy).toHaveBeenCalledWith('leg-observado', expect.objectContaining({
       anioEgreso: '2025',
     }));
-    expect(eliminarSpy).toHaveBeenCalledTimes(1);
+    expect(eliminarSpy).toHaveBeenCalledTimes(2);
     expect(eliminarSpy).toHaveBeenCalledWith('doc-titulo-anterior');
-    expect(subirSpy).toHaveBeenCalledTimes(1);
+    expect(eliminarSpy).toHaveBeenCalledWith('doc-analitico-anterior');
+    expect(subirSpy).toHaveBeenCalledTimes(2);
     expect(subirSpy).toHaveBeenCalledWith(
       'leg-observado',
       'TITULO_GRADO',
       expect.objectContaining({ name: 'titulo-corregido.pdf' })
+    );
+    expect(subirSpy).toHaveBeenCalledWith(
+      'leg-observado',
+      'ANALITICO',
+      expect.objectContaining({ name: 'analitico-corregido.pdf' })
     );
     expect(enviarSpy).toHaveBeenCalledWith('leg-observado');
   });

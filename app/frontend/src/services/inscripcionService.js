@@ -150,11 +150,7 @@ export const inscripcionService = {
    */
   actualizarPreinscripcion: async (legajoId, datosAspirante) => {
     const payload = {
-      ...(datosAspirante.dni ? { dni: String(datosAspirante.dni).trim() } : {}),
       ...(datosAspirante.cohorte_id ? { cohorte_id: datosAspirante.cohorte_id } : {}),
-      ...(datosAspirante.nombre ? { nombre: String(datosAspirante.nombre).trim() } : {}),
-      ...(datosAspirante.apellido ? { apellido: String(datosAspirante.apellido).trim() } : {}),
-      ...(datosAspirante.email ? { email: String(datosAspirante.email).trim().toLowerCase() } : {}),
       nacionalidad: optionalText(datosAspirante.nacionalidad),
       domicilio: optionalText(datosAspirante.domicilio),
       titulo: optionalText(datosAspirante.titulo),
