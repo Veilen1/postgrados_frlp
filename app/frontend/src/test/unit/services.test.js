@@ -270,4 +270,70 @@ describe('inscripcionService y authService', () => {
     expect(localStorage.getItem('refresh_token')).toBeNull();
     expect(localStorage.getItem('user_profile')).toBeNull();
   });
+
+  it('obtenerCohortes omite Authorization aunque exista token vencido en localStorage', async () => {
+    localStorage.setItem('access_token', 'token-vencido');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ id: 'c-1', nombre: 'Cohorte 2026', abierta: true }],
+    });
+
+    await inscripcionService.obtenerCohortes();
+    const [, fetchOptions] = globalThis.fetch.mock.calls[0];
+    expect(fetchOptions.headers?.Authorization).toBeUndefined();
+  });
+
+  it('obtenerMiLegajo invoca GET /legajos/mi-legajo con token bearer', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'l-9', estado: 'BORRADOR' }),
+    });
+
+    const legajo = await inscripcionService.obtenerMiLegajo();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/legajos/mi-legajo'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({ Authorization: 'Bearer jwt-asp' }),
+      })
+    );
+    expect(legajo.id).toBe('l-9');
+  });
+
+  it('actualizarPreinscripcion invoca PUT /legajos/{id} y eliminarDocumento maneja 204', async () => {
+    localStorage.setItem('access_token', 'jwt-asp');
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'l-9', dni: '40111222' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+      });
+
+    const updated = await inscripcionService.actualizarPreinscripcion('l-9', {
+      dni: '40111222',
+      cohorte_id: 'c-1',
+    });
+    expect(updated.dni).toBe('40111222');
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/legajos/l-9'),
+      expect.objectContaining({ method: 'PUT' })
+    );
+
+    const delRes = await inscripcionService.eliminarDocumento('d-old');
+    expect(delRes).toBeNull();
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/documentos/d-old'),
+      expect.objectContaining({ method: 'DELETE' })
+    );
+  });
 });
