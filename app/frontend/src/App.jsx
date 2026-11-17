@@ -184,7 +184,9 @@ export default function App() {
   const renderNav = () => (
     <nav className="demo-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px' }}>
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button className={vista === 'preinscripcion' ? 'active' : ''} onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
+        {usuarioActivo?.rol === 'ASPIRANTE' && (
+          <button className={vista === 'preinscripcion' ? 'active' : ''} onClick={() => setVista('preinscripcion')}>Preinscripcion</button>
+        )}
         {esDocente && (
           <button className={vista === 'docente' ? 'active' : ''} onClick={() => setVista('docente')}>Docente</button>
         )}
