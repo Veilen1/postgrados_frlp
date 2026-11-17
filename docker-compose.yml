@@ -51,6 +51,7 @@ services:
       - "8000:8000"
     volumes:
       - ./app/backend/src:/app/src
+      - ./app/backend/alembic:/app/alembic
       - ./app/backend/tests:/app/tests:ro
       - ./app/backend/pytest.ini:/app/pytest.ini:ro
       - postgrado-storage:/var/postgrado-storage
