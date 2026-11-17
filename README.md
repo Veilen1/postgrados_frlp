@@ -1,256 +1,177 @@
-# 🎓 Sistema de Posgrado
-### Sistema de Gestión Académica · UTN FRLP · Desarrollo de Software 2026
+# 🎓 Sistema de Gestión Académica de Posgrado (SGAP)
 
-[![Estado](https://img.shields.io/badge/estado-En%20Desarrollo-yellow)](#)
-[![Cobertura objetivo](https://img.shields.io/badge/cobertura-≥70%25-green)](#)
-[![Semana actual](https://img.shields.io/badge/semana-1%20de%2032-blue)](#)
+### Cátedra Desarrollo de Software · UTN FRLP · 2026
 
-> **Proyecto integrador** de la cátedra **Desarrollo de Software** — 3° año · Turno NOche · Ingeniería en Sistemas de Información · UTN FRLP · 2026
+[![Estado](https://img.shields.io/badge/estado-Core%20Funcional-brightgreen)](#estado-de-m%C3%B3dulos)
+[![Cobertura objetivo](https://img.shields.io/badge/cobertura%20backend-%E2%89%A570%25-green)](#pruebas-y-calidad)
+[![CI](https://img.shields.io/badge/CI-Pytest%20%7C%20Ruff%20%7C%20Vitest%20%7C%20Vite-blue)](#pruebas-y-calidad)
+
+> **Proyecto integrador** de la cátedra **Desarrollo de Software** — 3° año · Turno Noche · Ingeniería en Sistemas de Información · UTN FRLP · 2026.
 
 ---
 
 ## ¿Qué es este proyecto?
 
-**Sistema Postgrados** reemplaza el proceso manual de gestión de posgrado de UTN FRLP —hoy basado en Excel, carpetas físicas y correos— por una plataforma web centralizada que digitaliza el ciclo de vida del estudiante: desde la preinscripción hasta la graduación.
-
-**Este repositorio es el punto de entrada único** para todos los equipos del curso. Cada equipo implementa el **Módulo Core (obligatorio para todos)** más **un módulo especializado** asignado por sorteo.
-
----
-## Equipo
-**Esta seccion es un template para el equipo, debe completarse en le primer commit**
-
-| Nombre              | Rol                          | GitHub                          | Email                          |
-|---------------------|------------------------------|---------------------------------|--------------------------------|
-| Valentin Garcia Devrient | Líder / Desarrollador Principal | [@veilen1](https://github.com/Veilen1) | devrientv@gmail.com|
-| Lucio Angel  | Desarrollador Backend        | [@locckusdem](https://github.com/locckusdem)   | lucio.angel@alu.frlp.utn.edu.ar            |
-| Araceli Melina Davila  | Diseñador / Frontend         | [@davilaaraceli18](https://github.com/davilaaraceli18)   | davilaaraceli@hotmail.com            |
-| Rivero Emilio  | Diseñador / Frontend         | [@EmiRM73](https://github.com/EmiRM73)   | emiliorivero161@gmail.com            |
-| Privitera Luciano  | Diseñador / Frontend         | [@lucianoprivitera](https://github.com/lucianoprivitera)   | luchoprivi008@gmail.com            |
-| Redruello Lautaro  | Desarrollador Backend  | [@lauty04ARG](https://github.com/lauty04ARG)   | lautaredruello@gmail.com|
-
-
-### Reglas básicas del equipo
-
-- **Commits**: Usa mensajes claros y en presente (ej: "Agrega login con GitHub"). Sigue la convención [Conventional Commits](https://www.conventionalcommits.org) si es posible.
-- **Branching**: Nunca pushes directos a `main`. Crea una rama con tu nombre o tarea (`feature/nombre-tarea` o `bugfix/...`).
-- **Pull Requests**: Siempre abre un PR para revisar el código. Mínimo 1 aprobación antes de mergear.
-- **Código**: Mantén el código limpio, comenta lo complejo y respeta el estilo del proyecto (usa el `.editorconfig` si existe).
-- **Issues**: Reporta bugs o ideas en la sección de Issues con la plantilla correspondiente.
-
-**Revisa las reglas completas** CONTRIBUTING.md
-
-### Comunicación
-- **Comunicacion con docentes:** Mediante CVG o presencial en horarios de catedra
-- **Principal del grupo**: Usamos **Discord/Slack/Teams** (agrega el link del canal).
-- **Discusiones técnicas**: En los **Issues** y **Pull Requests** del repositorio.
-- **Urgencias**: Mensaje directo por WhatsApp/Telegram/Slack.
-- **Horario de pair programming**: Reuniones de trabajo virtual programadas
-- **Reuniones**: [Breve weekly los miércoles a las XX hs] o según necesidad.
-
-**Cualquier duda** → Pregunta primero en el canal de #general o abre un Issue.
-
-**Completa luego** [`docs\onboarding\TEAM_CHARTER.md`] (TEAM_CHARTER.md) 
+**Sistema de Posgrado (SGAP)** reemplaza la gestión manual de posgrados de la UTN FRLP —originalmente basada en planillas Excel, carpetas físicas y correos— por una plataforma web centralizada con trazabilidad completa del legajo académico: desde el registro y preinscripción digital del aspirante con documentación en PDF hasta la auditoría, emisión de número de legajo oficial y seguimiento por parte del equipo de conducción.
 
 ---
 
-## Documentación: Por Dónde Empezar
+## 👥 Equipo
 
-Lee en este orden antes de escribir código:
+### Integrantes activos
 
-0. **Lee este docmento README completamente. **
-1. 📋 [`docs/SRS.md`](docs/SRS.md) — Qué debe hacer el sistema (fuente de verdad de requisitos)
-2. 🗺️ [`docs/BFD.md`](docs/BFD.md) — Cómo funciona el negocio hoy y cómo debe ser
-3. 📦 [`docs/PRD.md`](docs/PRD.md) — Detalle funcional con criterios de aceptación (Gherkin)
-4. 🏗️ [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — Cómo estructurar el código
-5. 🗓️ [`docs/CRONOGRAMA.md`](docs/CRONOGRAMA.md) — Tu roadmap personal de las próximas 30 semanas
-6. 🚀 [`onboarding/Guia_KickOff.md`](docs/onboarding/GUIA_KICKOFF.md) — Qué entregar en la semana 3
----
+| Nombre | Rol | GitHub | Email |
+| :--- | :--- | :--- | :--- |
+| **Valentín García Devrient** | Líder / Desarrollador Full Stack | [@Veilen1](https://github.com/Veilen1) | devrientv@gmail.com |
+| **Lucio Ángel** | Desarrollador Backend / Integración & Infra | [@locckusdem](https://github.com/locckusdem) | lucio.angel@alu.frlp.utn.edu.ar |
+| **Emilio Rivero** | Desarrollador Frontend / Integración API | [@EmiRM73](https://github.com/EmiRM73) | emiliorivero161@gmail.com |
+| **Lautaro Redruello** | Desarrollador Frontend / Auth & RBAC | [@lauty04ARG](https://github.com/lauty04ARG) | lautaredruello@gmail.com |
 
-## Estructura de Módulos
-
-| Módulo | Descripción | Estado |
-|--------|-------------|--------|
-| **CORE** *(todos los equipos)* | Inscripción, legajo digital, workflow de estados, gestión documental | 🟡 En kickoff |
-| **MOD-B** | Gestión Docente: asistencia digital, calificaciones, recordatorios automáticos | 🔴 Pendiente |
-| **MOD-C** | Seguimiento de Graduación: TFI/Tesis, semáforo de riesgo académico | 🔴 Pendiente |
-| **MOD-D** | Analytics & Reporting: dashboards, estadísticas por cohorte, exportación | 🔴 Pendiente |
+### Colaboradores iniciales
+Agradecemos también la participación inicial en el maquetado del prototipo frontend de **Araceli Melina Dávila** ([@davilaaraceli18](https://github.com/davilaaraceli18)) y **Luciano Privitera** ([@lucianoprivitera](https://github.com/lucianoprivitera)).
 
 ---
 
-## Quickstart — Levantá el entorno
+## 📊 Estado de Módulos
 
-> **Requisitos previos:** Git · Docker Engine / Docker Desktop (Compose v2)
+| Módulo | Alcance implementado | Estado |
+| :--- | :--- | :--- |
+| **CORE** *(Preinscripción, Legajos y Conducción)* | Auth JWT + RBAC por roles, registro/preinscripción pública y autenticada, vista `MiLegajo`, carga/validación de PDFs (`%PDF`, ≤ 5 MB), auditoría documental, máquina de estados (`BORRADOR → ENVIADO → EN_REVISION → APROBADO / OBSERVADO / RECHAZADO`), emisión transaccional de N° de legajo (`AA-COD-CC-NNN`), expediente de estudiante y gestión de cohortes. | 🟢 **Implementado (E2E con PostgreSQL)** |
+| **Estadísticas Core** | KPIs en tiempo real, tasa de aprobación, solicitudes de beca, distribución por estado y gráfico de demanda por carrera sobre datos reales de la API. | 🟢 **Implementado** |
+| **MOD-B** *(Gestión Docente)* | Interfaz de planilla de asistencia y calificaciones restringida al rol `DOCENTE` (maqueta UI; sin tablas/endpoints académicos en backend). | 🟡 **Maqueta UI (RBAC activo)** |
+| **MOD-C** *(Seguimiento de Graduación)* | Reglas de semáforo de riesgo y seguimiento de TFI/Tesis. | 🔴 **Pendiente (fuera de alcance actual)** |
 
-### 1. Comandos Estándar Multiplataforma (Linux / Windows / macOS)
+---
+
+## 🚀 Quickstart — Levantá el entorno
+
+> **Requisitos previos:** Git · Docker Engine / Docker Desktop (Compose v2) o Podman con `docker-compose`.
+
+### 1. Levantar servicios con Docker Compose
 
 ```bash
-# 1. Configurá variables de entorno (solo la primera vez)
+# 1. Crear variables de entorno locales (solo la primera vez)
 cp .env.example .env
 
-# 2. Levantá los servicios (PostgreSQL 16 Alpine + FastAPI 3.12 + React 19)
-docker compose up -d
+# 2. Construir imágenes y levantar PostgreSQL 16 + FastAPI + React/Vite
+docker compose up -d --build
 
-# 3. Verificá el estado y healthchecks de los contenedores
+# 3. Verificar estado y healthchecks
 docker compose ps
-
-# 4. Ejecutá la suite de pruebas automatizadas en el backend
-docker compose exec backend pytest -v
 ```
 
-✅ **Criterio de éxito:**
-- Backend API & Swagger: `http://localhost:8000/api/docs`
-- Healthcheck activo: `http://localhost:8000/api/v1/health`
-- Frontend UI: `http://localhost:3000`
-- Para ejecutar el backend sin Docker, seguí [`app/backend/README.md`](app/backend/README.md).
+Al iniciar:
+* **PostgreSQL** ejecuta [`docker/database/init.sql`](docker/database/init.sql) cuando se crea el volumen inicial.
+* **Backend** aplica automáticamente las migraciones pendientes con `alembic upgrade head` (`0001` a `0005`).
+
+**URLs locales:**
+* **Frontend UI:** `http://localhost:3000`
+* **Backend Swagger / OpenAPI:** `http://localhost:8000/api/docs`
+* **Healthcheck:** `http://localhost:8000/api/v1/health`
+
+*(Para ejecutar el backend fuera de Docker, seguí [`app/backend/README.md`](app/backend/README.md)).*
+
+### 2. Cuentas de prueba (Seed inicial)
+
+El archivo [`docker/database/init.sql`](docker/database/init.sql) carga automáticamente estas cuentas para probar todos los roles del sistema:
+
+| Rol | Email | Contraseña | Acceso principal |
+| :--- | :--- | :--- | :--- |
+| **ADMIN_POSGRADO** | `admin@posgrado.frlp.utn.edu.ar` | `Admin123!` | Panel de Conducción (Inscripciones, Estudiantes, Posgrados, Estadísticas) |
+| **ASPIRANTE** | `aspirante.demo@posgrado.frlp.utn.edu.ar` | `Aspirante123!` | Preinscripción y vista `Mi Legajo` |
+| **DOCENTE** | `docente.demo@posgrado.frlp.utn.edu.ar` | `Docente123!` | Panel Docente |
+
+*(También podés registrar aspirantes nuevos directamente desde el botón **"Preinscribite acá como aspirante"** en la pantalla de Login).*
+
+### 3. Atajos con `Makefile`
+
+| Comando `make` | Equivalente Docker Compose | Descripción |
+| :--- | :--- | :--- |
+| `make up` | `docker compose up -d` | Levanta el entorno en segundo plano |
+| `make status` | `docker compose ps` | Verifica estado y healthchecks |
+| `make logs` | `docker compose logs -f` | Sigue logs en tiempo real |
+| `make test` | `docker compose exec backend pytest -v` | Corre la suite Pytest del backend |
+| `make test-cov` | `docker compose exec backend pytest --cov=src ...` | Corre Pytest con cobertura |
+| `make db-shell` | `docker compose exec db psql ...` | Abre consola interactiva PostgreSQL |
+| `make down` | `docker compose down` | Detiene contenedores |
+| `make clean` | `docker compose down -v` | Resetea contenedores y volúmenes (DB + PDFs) |
+
+> **Nota para Linux con Podman / SELinux (ej. Fedora):** habilitá el socket de usuario (`systemctl --user enable --now podman.socket`) y, si ves errores de permisos al montar archivos locales, aplicá contexto SELinux con `chcon -Rt svirt_sandbox_file_t ./docker ./app/backend/src ./app/backend/tests ./app/backend/pytest.ini ./app/frontend/src ./app/frontend/index.html`.
 
 ---
 
-### 2. Atajos de Productividad con `make` (Opcional — Linux / macOS / WSL)
+## 🧪 Pruebas y Calidad
 
-Si contás con la utilidad `make` instalada (estándar en Linux, macOS o Windows bajo WSL), podés utilizar los atajos simplificados:
+Los workflows de CI en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) validan automáticamente cada PR con:
 
-| Comando Make | Equivalente Docker Compose | Descripción |
-|---|---|---|
-| `make up` | `docker compose up -d` | Levanta el entorno completo en background. |
-| `make status` | `docker compose ps` | Inspecciona el estado y healthcheck. |
-| `make test` | `docker compose exec backend pytest -v` | Corre la suite de pruebas Pytest. |
-| `make logs` | `docker compose logs -f` | Monitorea logs en tiempo real. |
-| `make db-shell` | `docker compose exec db psql -U ...` | Abre la consola interactiva de PostgreSQL. |
-| `make down` | `docker compose down` | Detiene y remueve los contenedores. |
+```bash
+# Backend: tests unitarios/integración + cobertura >= 70% y linter Ruff
+docker compose exec backend pytest --cov=src.auth --cov=src.legajos --cov=src.shared.auth --cov=src.shared.api --cov-report=term-missing --cov-fail-under=70
+docker compose exec backend ruff check .
 
-> **Nota para usuarios de Windows nativo (PowerShell / CMD):** Si no tenés `make` instalado en tu terminal de Windows, ejecutá directamente los comandos estándar de la sección 1.
+# Frontend: tests unitarios/E2E (Vitest + Testing Library) y build de producción
+docker compose exec frontend npm test
+docker compose exec frontend npm run build
+```
 
 ---
 
-## Estructura del Repositorio
+## 🛠️ Stack Tecnológico Real
 
-```
-postgrado-[equipo]/
-├── README.md                     ← Empezá acá
-├── CONTRIBUTING.md               ← Cómo trabajar: ramas, commits, PRs
-├── CHANGELOG.md                  ← Historial de cambios por versión
-├── docker-compose.yml            ← Ambiente local unificado
+| Capa | Tecnología utilizada | Propósito |
+| :--- | :--- | :--- |
+| **Frontend** | **React 19 + Vite 8 + CSS** | SPA multi-rol (Login, Preinscripción, Mi Legajo, Panel Conducción, Panel Docente) |
+| **Testing Frontend** | **Vitest 5 + Testing Library + jsdom** | Tests unitarios de servicios/componentes y flujo E2E de navegación RBAC |
+| **Backend** | **FastAPI + Python 3.12 + Pydantic v2** | API REST (`/api/v1`) con validación estricta, JWT HS256 y Swagger automático |
+| **Persistencia / ORM** | **SQLAlchemy 2.0 (async) + Alembic + PostgreSQL 16** | Modelos async, migraciones versionadas (`0001`–`0005`) y constraints transaccionales |
+| **Testing & Lint Backend** | **Pytest + pytest-asyncio + HTTPX + Ruff** | Pruebas de auth, cohortes, legajos, documentos y chequeo estático de código |
+| **Infraestructura** | **Docker Compose + GitHub Actions** | Entorno reproducible multi-contenedor y CI automático en `dev` / `main` |
+
+---
+
+## 📁 Estructura del Repositorio
+
+```text
+postgrados_frlp/
+├── README.md                     ← Documentación principal
+├── CHANGELOG.md                  ← Historial de cambios relevantes
+├── CONTRIBUTING.md               ← Convenciones de ramas, commits y PRs
+├── Makefile                      ← Atajos de desarrollo y testing
+├── docker-compose.yml            ← Orquestación DB + Backend + Frontend
 ├── .env.example                  ← Variables de entorno de referencia
 │
-├── docs/
-│   ├── SRS.md                    ← Especificación de Requisitos (fuente de verdad)
-│   ├── PRD.md                    ← Product Requirements Document
-│   ├── BFD.md                    ← Business Flow Diagram
-│   ├── ARQUITECTURA.md           ← Decisiones técnicas + diagramas C4
-│   ├── CRONOGRAMA.md             ← Roadmap con fechas reales (abr–nov 2026)
-│   ├── BACKLOG_MODELO.md         ← Historias de usuario base + plantillas
-│   ├── DEFINITION_OF_DONE.md    ← Criterios de completitud del equipo
-│   ├── ASR.md                    ← Requisitos arquitectónicamente significativos
-│   │
-│   ├── onboarding/
-│   │   ├── GUIA_KICKOFF.md       ← Qué hacer en las primeras 3 semanas
-│   │   ├── SETUP_LOCAL.md        ← Setup paso a paso con troubleshooting
-│   │   └── TEAM_CHARTER.md       ← Contrato social del equipo (completar)
-│   │
-│   └── adr/                      ← Registro de decisiones de arquitectura
-│       ├── ADR-000-template.md
-│       └── ADR-001-stack.md      ← Primera decisión: elección de stack
-│
 ├── app/
-│   ├── backend/                 ← API FastAPI del Módulo Core
-│   └── frontend/                ← Aplicación React
+│   ├── backend/                  ← API FastAPI (auth, cohortes, legajos, documentos, alembic, tests)
+│   └── frontend/                 ← SPA React + Vite (componentes, servicios, tests Vitest)
 │
-└── .github/
-    └── workflows/
-        └── ci.yml                ← Pipeline: lint + test + build en cada PR
+├── docker/
+│   └── database/init.sql         ← Esquema base y usuarios/cohorte seed
+│
+├── docs/                         ← Especificación y arquitectura (SRS, PRD, BFD, RBAC, ADRs)
+├── onboarding/                   ← Guías de kickoff, setup local y team charter
+├── adr/                          ← Registro inicial de decisiones de arquitectura
+└── .github/workflows/ci.yml      ← Pipeline CI (Ruff, Pytest, Vitest, Vite build)
 ```
 
 ---
 
-## Calendario de Entregas 2026
+## 📚 Documentación de Referencia
 
-| Hito | Semana | Fecha | Entregable obligatorio |
-|------|--------|-------|------------------------|
-| **Kickoff completo** | 3 | 01/05 | Repo + Team Charter + ASR + RFC-001 |
-| **Sprint 0** | 5 | 15/05 | Auth + DB + `docker-compose up` funcionando |
-| **Review 1** | 10 | 19/06 | Demo: inscripción de aspirante end-to-end |
-| **Entrega Parcial** | 16 | 31/07 | `git tag v0.5` — Core completo y funcional |
-| **Review 2** | 22 | 11/09 | Demo: módulo especializado funcional |
-| **Code Freeze** | 27 | 16/10 | Rama `main` congelada, solo bugfixes |
-| **Entrega Final** | 28 | 23/10 | `git tag v1.0` — Sistema completo |
-| **Exposición** | 30-31 | 06–13/11 | Demo Day con stakeholders reales |
+* 📋 [`docs/SRS.md`](docs/SRS.md) — Especificación de Requisitos
+* 📦 [`docs/PRD.md`](docs/PRD.md) — Product Requirements Document
+* 🏗️ [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — Arquitectura del sistema
+* 🔐 [`docs/ARQUITECTURA_RBAC.md`](docs/ARQUITECTURA_RBAC.md) — Especificación formal de roles, permisos y errores
+* 🔢 [`docs/DECISION_FORMATO_NUMERO_LEGAJO.md`](docs/DECISION_FORMATO_NUMERO_LEGAJO.md) — Formato oficial `AA-COD-CC-NNN`
+* 🤝 [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`onboarding/SETUP_LOCAL.md`](onboarding/SETUP_LOCAL.md) · [`onboarding/TEAM_CHARTER.md`](onboarding/TEAM_CHARTER.md)
 
 ---
 
-## Roles del Equipo (rotan cada 4 semanas)
+## 🔀 Flujo de Trabajo del Equipo
 
-| Rol | Responsabilidades | Entregables específicos |
-|-----|-------------------|------------------------|
-| **Product Owner** | Prioriza el backlog, gestiona historias, interfaz con el docente-cliente | PRD actualizado, minutas de sprint planning |
-| **Tech Lead** | Decisiones de arquitectura, code reviews obligatorios, ADRs | Diagramas C4, ADRs, configuración CI/CD |
-| **Dev Lead** | GitFlow, integración, calidad de código (linting), pair programming | Historial de commits limpio, documentación técnica |
-| **QA/UX Lead** | Testing exploratorio, wireframes, criterios de aceptación, reporte de bugs | Casos de prueba, reporte de bugs, análisis UX |
-
----
-
-## Definition of Done (DoD)
-
-Una historia de usuario está **terminada** cuando cumple **todos** estos criterios:
-
-- [ ] Código mergeado a `main` via **Pull Request** con al menos 1 code review aprobado
-- [ ] **Tests unitarios pasando** con ≥70% de cobertura en la lógica nueva
-- [ ] **Linter sin errores** (ESLint + Prettier para JS/TS · PEP8 para Python)
-- [ ] **Documentación de API actualizada** (Swagger/OpenAPI en `/api/docs`)
-- [ ] **Probado en el entorno local de otro integrante** del equipo
-- [ ] **`CHANGELOG.md` actualizado** con descripción del cambio
-
----
-
-## Reglas No Negociables
-
-> Estas reglas aplican a todos los equipos desde el día 1.
-
-1. **Nunca pushees directamente a `main`**. Siempre via Pull Request.
-2. **Los commits referencian el requisito**: `feat: REQ-CORE-002 valida tamaño de PDF`
-3. **Si el pipeline de CI falla, es prioridad máxima** antes de continuar desarrollo.
-4. **Las variables de entorno nunca van al repo** (`.env` está en `.gitignore`).
-5. **Los bloqueos se comunican en ≤2 horas**: si estás trabado, avisá en el canal del equipo.
-
----
-
-## Stack Tecnológico 
-** Template a completar por el equipo** 
-
-## Stack Tecnológico
-
-| Capa              | Recomendado (Prioridad: Simplicidad + Demanda) | Alternativa (Mayor estructura / Enterprise) | Justificación |
-|-------------------|------------------------------------------------|---------------------------------------------|-------------|
-| **Frontend**     | **React 19 + TypeScript + Vite + TailwindCSS + TanStack Query** | Next.js 15+ (App Router) | React sigue siendo la tecnología frontend **más demandada** del mercado. Vite es muy rápido y simple. TanStack Query simplifica mucho la gestión de datos. |
-| **Backend**      | **FastAPI (Python 3.12+)**                    | NestJS (TypeScript)                        | FastAPI es **mucho más simple**, rápido de desarrollar, tiene documentación automática (Swagger) y excelente rendimiento. Ideal para proyectos académicos y APIs modernas. NestJS ofrece más estructura pero aumenta la complejidad. |
-| **ORM / DB Layer** | **SQLAlchemy 2.0 + Alembic** (con async support) | Tortoise ORM o Prisma (si vas full TypeScript) | SQLAlchemy es el estándar más maduro y potente para Python. Alembic maneja migraciones muy bien. Para proyectos simples también puedes usar **SQLModel** (de tiangolo, creador de FastAPI) → aún más simple. |
-| **Base de Datos** | **PostgreSQL 16/17 (Docker)**                 | ← igual                                    | Mejor relación rendimiento / features / ecosistema. Excelente con Docker. |
-| **Testing**       | **Pytest + HTTPX** (unitarias + integración) + **Playwright** (E2E opcional) | Vitest + Supertest (si usas NestJS)       | Pytest es muy simple y potente. Enfocarte solo en **unitarias** como dijiste es una buena decisión para no complicar el proyecto. |
-| **DevOps / Infra**| **Docker + Docker Compose + GitHub Actions** | ← igual                                    | Estándar actual. Muy simple de configurar con `docker-compose.yml`. |
-
-### Por qué elegimos este stack
-
-- **Alta empleabilidad**: React y PostgreSQL son de las tecnologías más solicitadas en 2026.
-- **Simplicidad y velocidad de desarrollo**: FastAPI + SQLModel permite crear APIs completas con muy poco código.
-- **Moderno pero maduro**: Evitamos tecnologías demasiado experimentales.
-- **Full Docker**: Todo el entorno se levanta con un solo comando (`docker compose up`).
-
-**¿Quieres cambiar algo?**  
-El stack es flexible. Si prefieres **full TypeScript** (React + NestJS + Prisma), también es una excelente opción (más demandada en algunas empresas, pero más verbose).
-> El stack es sugerido. Si el equipo quiere otra tecnología, debe presentar un **RFC aprobado antes de la semana 4**.
-
-
----
-
-## Canales de Ayuda
-
-| Canal | Para qué usarlo |
-|-------|----------------|
-| Correo `#postgrado-general` | Dudas generales, anuncios del docente |
-| Correo `#[nombre-equipo]` | Comunicación interna del equipo |
-| Github Discussion `#[nombre-equipo]` | Comunicación interna del equipo |
-| **Issues de GitHub** | Bugs, tareas técnicas, dudas de implementación |
-| **Clínica de Código** (martes semanas 20hs, aula) | Traé código roto o decisiones difíciles |
-
+1. **Nunca pushear directo a `main`**: todo cambio pasa por PR desde rama de trabajo hacia `dev`, y luego de `dev` hacia `main`.
+2. **Conventional Commits**: `feat(...)`, `fix(...)`, `test(...)`, `docs(...)`, `chore(...)`.
+3. **CI obligatorio**: no se mergea si fallan Ruff, Pytest, Vitest o el build de producción.
+4. **Secretos fuera de Git**: nunca commitear `.env` ni claves reales.
 
 ---
 
