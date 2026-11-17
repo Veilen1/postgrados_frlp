@@ -2,6 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { inscripcionService } from '../services/inscripcionService';
 import { authService } from '../services/authService';
 
+function leerCabeceraPdf(file) {
+  const slice = file.slice(0, 4);
+  if (typeof slice?.text === 'function') {
+    return slice.text();
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(slice);
+  });
+}
+
 const Paso1DatosPersonales = ({ formData, handleChange, errores, requiereCuenta, onNext }) => (
   <>
     <div className="form-grid">
@@ -347,6 +360,8 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const [cargando, setCargando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState(null);
   const [legajoConfirmado, setLegajoConfirmado] = useState(null);
+  const [legajoIdEnCurso, setLegajoIdEnCurso] = useState(null);
+  const [sesionPublicaCreada, setSesionPublicaCreada] = useState(false);
   const [errores, setErrores] = useState({});
   const [erroresArchivos, setErroresArchivos] = useState({});
 
@@ -355,10 +370,21 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const [cargandoCohortes, setCargandoCohortes] = useState(true);
   const [errorCohortes, setErrorCohortes] = useState(null);
 
+  const usuarioInicial = authService.getUser();
   const [formData, setFormData] = useState({
-    nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '', password: '',
-    titulo: '', universidad: '', anioEgreso: '',
-    cohorte_id: '', posgrado: '', nombreCohorte: '',
+    nombre: usuarioInicial?.nombre || '',
+    apellido: usuarioInicial?.apellido || '',
+    nacionalidad: '',
+    dni: '',
+    email: usuarioInicial?.email || '',
+    domicilio: '',
+    password: '',
+    titulo: '',
+    universidad: '',
+    anioEgreso: '',
+    cohorte_id: '',
+    posgrado: '',
+    nombreCohorte: '',
   });
   const requiereCuenta = !authService.isAuthenticated();
 
@@ -413,8 +439,9 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     dni: null,
   });
 
-  const handleFileChange = (tipo, e) => {
-    const file = e.target.files[0] || null;
+  const handleFileChange = async (tipo, e) => {
+    const inputEl = e.target;
+    const file = inputEl.files[0] || null;
 
     if (!file) {
       setArchivos((prev) => ({ ...prev, [tipo]: null }));
@@ -424,7 +451,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     // Validación 1: Debe ser formato PDF
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setErroresArchivos((prev) => ({ ...prev, [tipo]: 'Solo se aceptan archivos en formato PDF' }));
-      e.target.value = '';
+      inputEl.value = '';
       setArchivos((prev) => ({ ...prev, [tipo]: null }));
       return;
     }
@@ -432,9 +459,27 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     // Validación 2: Límite de 5MB (5 * 1024 * 1024 bytes)
     if (file.size > 5 * 1024 * 1024) {
       setErroresArchivos((prev) => ({ ...prev, [tipo]: 'El archivo es demasiado grande. Máximo permitido: 5MB' }));
-      e.target.value = '';
+      inputEl.value = '';
       setArchivos((prev) => ({ ...prev, [tipo]: null }));
       return;
+    }
+
+    // Validación 3: Firma binaria real %PDF (evita archivos renombrados que el backend rechaza con 415)
+    if (typeof file.slice === 'function') {
+      try {
+        const header = await leerCabeceraPdf(file);
+        if (header !== '%PDF') {
+          setErroresArchivos((prev) => ({
+            ...prev,
+            [tipo]: 'El archivo no es un PDF válido o está dañado. Exportalo nuevamente en formato PDF.',
+          }));
+          inputEl.value = '';
+          setArchivos((prev) => ({ ...prev, [tipo]: null }));
+          return;
+        }
+      } catch {
+        // Si el navegador no permite leer el slice, delegamos la validación al servidor
+      }
     }
 
     // Si es válido, limpiamos el error y guardamos el archivo
@@ -498,6 +543,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   const handleConfirm = async () => {
     setCargando(true);
     setErrorEnvio(null);
+    let creoSesionAhora = false;
     try {
       // 0. Si el aspirante ingresó desde el acceso público sin sesión, registrarlo y autenticarlo
       if (!authService.isAuthenticated()) {
@@ -508,12 +554,31 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           apellido: formData.apellido,
         });
         await authService.login(formData.email, formData.password);
+        creoSesionAhora = true;
+        setSesionPublicaCreada(true);
       }
 
-      // 1. Crear el legajo en el backend con los datos del aspirante
-      const legajo = await inscripcionService.crearPreinscripcion(formData);
-      const legajoId = legajo?.id || legajo?.legajo_id;
-      console.log('Legajo creado exitosamente. ID:', legajoId);
+      // 1. Crear el legajo o reutilizar el existente en BORRADOR/OBSERVADO ante reintentos
+      let legajoId = legajoIdEnCurso;
+      if (!legajoId) {
+        try {
+          const legajo = await inscripcionService.crearPreinscripcion(formData);
+          legajoId = legajo?.id || legajo?.legajo_id;
+        } catch (err) {
+          if (err.status === 409) {
+            const existente = await inscripcionService.obtenerMiLegajo().catch(() => null);
+            if (existente && ['BORRADOR', 'OBSERVADO'].includes(existente.estado)) {
+              legajoId = existente.id;
+            } else {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
+        setLegajoIdEnCurso(legajoId);
+      }
+      console.log('Legajo listo para documentación. ID:', legajoId);
 
       // 2. Subir los archivos PDF adjuntos asociados a este legajo
       const documentosAEnviar = [
@@ -533,12 +598,19 @@ export default function Preinscripcion({ onVolverAlLogin }) {
       // 3. Enviar formalmente el legajo para que pase de BORRADOR a ENVIADO
       await inscripcionService.enviarLegajo(legajoId);
 
+      // Si el alta se realizó desde el acceso público, limpiamos la sesión temporal al finalizar
+      if (onVolverAlLogin && (sesionPublicaCreada || creoSesionAhora)) {
+        authService.logout();
+        setSesionPublicaCreada(false);
+      }
+
       setLegajoConfirmado({
         id: legajoId,
         nombre: `${formData.nombre} ${formData.apellido}`,
         email: formData.email,
         posgrado: formData.nombreCohorte || formData.posgrado,
       });
+      setLegajoIdEnCurso(null);
       setPaso(5);
     } catch (error) {
       console.error('Error en el proceso de inscripción:', error);
@@ -549,13 +621,27 @@ export default function Preinscripcion({ onVolverAlLogin }) {
   };
 
   const handleReset = () => {
+    if (onVolverAlLogin && sesionPublicaCreada) {
+      authService.logout();
+      setSesionPublicaCreada(false);
+    }
+    setLegajoIdEnCurso(null);
     setPaso(1);
     setLegajoConfirmado(null);
     setErrorEnvio(null);
     const primera = cohortes[0];
+    const usuarioActual = !onVolverAlLogin ? authService.getUser() : null;
     setFormData({
-      nombre: '', apellido: '', nacionalidad: '', dni: '', email: '', domicilio: '', password: '',
-      titulo: '', universidad: '', anioEgreso: '',
+      nombre: usuarioActual?.nombre || '',
+      apellido: usuarioActual?.apellido || '',
+      nacionalidad: '',
+      dni: '',
+      email: usuarioActual?.email || '',
+      domicilio: '',
+      password: '',
+      titulo: '',
+      universidad: '',
+      anioEgreso: '',
       cohorte_id: primera?.id || '',
       posgrado: primera ? (primera.carrera || primera.nombre) : '',
       nombreCohorte: primera ? primera.nombre : '',
@@ -568,6 +654,15 @@ export default function Preinscripcion({ onVolverAlLogin }) {
     });
   };
 
+  const handleVolverAlLogin = () => {
+    if (sesionPublicaCreada) {
+      authService.logout();
+      setSesionPublicaCreada(false);
+    }
+    setLegajoIdEnCurso(null);
+    onVolverAlLogin();
+  };
+
   return (
     <div>
       <header className="utn-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -578,7 +673,7 @@ export default function Preinscripcion({ onVolverAlLogin }) {
           <button
             type="button"
             className="btn-secondary"
-            onClick={onVolverAlLogin}
+            onClick={handleVolverAlLogin}
             style={{
               fontSize: '13px',
               padding: '8px 14px',
