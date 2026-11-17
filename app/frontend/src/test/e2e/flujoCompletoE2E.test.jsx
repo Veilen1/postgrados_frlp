@@ -114,6 +114,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText('(ADMIN_POSGRADO)')).toBeDefined();
       expect(screen.getByText(/Panel de Equipo de conducción/i)).toBeDefined();
     });
+    expect(screen.queryByRole('button', { name: 'Preinscripcion' })).toBeNull();
     expect(JSON.parse(localStorage.getItem('user_profile')).rol).toBe('ADMIN_POSGRADO');
   });
 
@@ -150,6 +151,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
     await waitFor(() => {
       expect(screen.getByText('(ASPIRANTE)')).toBeDefined();
     });
+    expect(screen.getByRole('button', { name: 'Preinscripcion' })).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Docente' })).toBeNull();
     expect(screen.queryByText(/Panel de Equipo de conducción/i)).toBeNull();
   });
@@ -188,6 +190,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText('Panel DOCENTE')).toBeDefined();
     });
     expect(screen.getByRole('button', { name: 'Docente' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Preinscripcion' })).toBeNull();
     expect(JSON.parse(localStorage.getItem('user_profile')).rol).toBe('DOCENTE');
   });
 
@@ -213,6 +216,7 @@ describe('Flujo E2E Completo del Módulo Core', () => {
       expect(screen.getByText(/Panel de Equipo de conducción/i)).toBeDefined();
       expect(screen.getByText('Carlos Rodriguez')).toBeDefined();
     });
+    expect(screen.queryByRole('button', { name: 'Preinscripcion' })).toBeNull();
 
     // Estado actual: En Revisión y "Se asigna al aprobar"
     expect(screen.getByText('Se asigna al aprobar')).toBeDefined();
