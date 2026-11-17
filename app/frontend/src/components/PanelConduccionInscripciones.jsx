@@ -101,6 +101,7 @@ function formatearTipoDoc(tipo) {
     DNI: 'Documento de Identidad (DNI)',
     TITULO_GRADO: 'Título Universitario de Grado',
     CV: 'Currículum Vitae',
+    FORM_BECA: 'Formulario de Beca',
     SOLICITUD_BECA: 'Formulario de Beca',
   };
   return tipos[tipo] || tipo;
