@@ -103,7 +103,7 @@ class Documento(Base):
     __tablename__ = "documentos"
     __table_args__ = (
         CheckConstraint(
-            "tipo IN ('DNI', 'TITULO_GRADO', 'PARTIDA', 'CUIT_CUIL', "
+            "tipo IN ('DNI', 'TITULO_GRADO', 'ANALITICO', 'PARTIDA', 'CUIT_CUIL', "
             "'FORM_INSCRIPCION', 'FORM_BECA', 'TITULO_POSGRADO', 'CV')",
             name="tipo_doc_valido",
         ),

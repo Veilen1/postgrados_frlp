@@ -170,6 +170,18 @@ async def update_legajo(
         )
 
     changes = payload.model_dump(exclude_unset=True)
+    for field in ("dni", "nombre", "apellido", "email"):
+        if field in changes:
+            incoming = changes[field]
+            current = getattr(legajo, field)
+            if isinstance(incoming, str) and isinstance(current, str):
+                incoming = incoming.lower() if field == "email" else incoming
+                current = current.lower() if field == "email" else current
+            if incoming != current:
+                raise AuthenticationError(
+                    "Los datos de identidad están bloqueados en un legajo existente",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
     cohorte_id = changes.get("cohorte_id")
     if cohorte_id is not None and cohorte_id != legajo.cohorte_id:
         legajo.cohorte = await _get_open_cohorte(db, cohorte_id)

@@ -151,7 +151,7 @@ el `usuario_id`. La lista administrativa acepta `page` (1 en adelante), `page_si
 `cohorte_id` y `estado`. Los estados se registran en `auditoria_legajos`.
 
 La carga documental recibe multipart/form-data con campos `tipo` y `archivo`. Los tipos
-admitidos son `DNI`, `TITULO_GRADO`, `PARTIDA`, `CUIT_CUIL`, `FORM_INSCRIPCION`, `FORM_BECA`,
+admitidos son `DNI`, `TITULO_GRADO`, `ANALITICO`, `PARTIDA`, `CUIT_CUIL`, `FORM_INSCRIPCION`, `FORM_BECA`,
 `TITULO_POSGRADO` y `CV`. Solo se aceptan archivos con firma `%PDF` de hasta 5 MiB. El
 almacenamiento usa el volumen privado `STORAGE_PATH`, nunca una ruta ni nombre proporcionado
 por el cliente; el listado no expone rutas internas ni checksums. La carga y eliminación

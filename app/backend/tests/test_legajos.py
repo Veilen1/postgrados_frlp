@@ -307,8 +307,6 @@ async def test_legajo_detail_and_update_enforce_ownership_and_state(
     updated = await client.put(
         f"/api/v1/legajos/{legajo['id']}",
         json={
-            "dni": "30123459",
-            "email": "UPDATED@example.com",
             "nacionalidad": "Argentina",
             "domicilio": "La Plata",
             "titulo": "Ingeniero actualizado",
@@ -318,11 +316,19 @@ async def test_legajo_detail_and_update_enforce_ownership_and_state(
         headers=auth_header(owner),
     )
     assert updated.status_code == 200
-    assert updated.json()["dni"] == "30123459"
-    assert updated.json()["email"] == "updated@example.com"
+    assert updated.json()["dni"] == "30123456"
+    assert updated.json()["email"] == "owner@example.com"
     assert updated.json()["titulo"] == "Ingeniero actualizado"
     assert updated.json()["universidad"] == "UTN"
     assert updated.json()["anio_egreso"] == 2024
+
+    identity_update = await client.put(
+        f"/api/v1/legajos/{legajo['id']}",
+        json={"dni": "30123459"},
+        headers=auth_header(owner),
+    )
+    assert identity_update.status_code == 400
+    assert "identidad" in identity_update.json()["message"].lower()
 
     await upload_required_documents(
         test_session_factory,
